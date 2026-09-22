@@ -1,0 +1,3186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JCAP Macro Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<style>
+/* ── Reset & base ─────────────────────────────────────────────────────── */
+:root {
+  --bg:#ffffff; --card:#ffffff; --card2:#f6f8fa; --card3:#eef1f4;
+  --border:#d0d7de; --border2:#eaeef2;
+  --text:#1f2328; --muted:#57606a; --dim:#6e7781;
+  --green:#1a7f37; --yellow:#9a6700; --red:#cf222e; --blue:#0969da;
+  --green-bg:rgba(26,127,55,.10); --yellow-bg:rgba(154,103,0,.10); --red-bg:rgba(207,34,46,.10);
+  --r:6px; --sh:0 1px 3px rgba(27,31,36,.08),0 1px 2px rgba(27,31,36,.04);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:15px;line-height:1.5}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:var(--card2)}
+::-webkit-scrollbar-thumb{background:#c4cbd3;border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:#afb8c1}
+/* ── Header ──────────────────────────────────────────────────────────── */
+header{background:#010409;border-bottom:1px solid var(--border);padding:0 28px;
+  display:flex;align-items:center;justify-content:space-between;height:54px;
+  position:sticky;top:0;z-index:200}
+.hl{display:flex;align-items:center;gap:14px}
+.ht{font-size:19px;font-weight:700;letter-spacing:.3px;color:var(--text)}
+.hs{font-size:13px;color:var(--dim);margin-top:1px}
+.hr{display:flex;align-items:center;gap:16px}
+#regime-badge{padding:4px 12px;border-radius:20px;font-size:13px;font-weight:700;
+  letter-spacing:.5px;text-transform:uppercase;transition:all .3s}
+#hdr-rf{font-size:13px;color:var(--dim);text-align:right}
+.btn{padding:5px 14px;border-radius:5px;border:none;cursor:pointer;
+  font-size:14px;font-weight:600;background:#7c3aed;color:#fff;transition:background .15s}
+.btn:hover{background:#6d28d9} .btn:disabled{opacity:.4;cursor:not-allowed}
+@keyframes spin{to{transform:rotate(360deg)}}
+.sp{display:inline-block;animation:spin 1s linear infinite}
+/* ── Tabs ─────────────────────────────────────────────────────────────── */
+.tab-bar{background:#010409;border-bottom:1px solid var(--border);
+  padding:0 28px;display:flex;gap:0;position:sticky;top:54px;z-index:190;
+  overflow-x:auto;scrollbar-width:thin;scrollbar-color:#30363d #010409}
+.tab-bar::-webkit-scrollbar{height:3px}
+.tab-bar::-webkit-scrollbar-track{background:#010409}
+.tab-bar::-webkit-scrollbar-thumb{background:#30363d;border-radius:2px}
+.tab{padding:11px 20px;border:none;background:none;cursor:pointer;font-size:14px;font-weight:600;
+  color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;
+  display:flex;align-items:center;gap:6px;white-space:nowrap}
+.tab.active{color:var(--text);border-bottom-color:var(--blue)}
+.tab:hover:not(.active){color:var(--text)}
+.tab-icon{font-size:16px}
+.tc{display:none} .tc.active{display:block}
+/* ── Frozen top panels stay dark (light theme below) ─────────────────────── */
+header{background:#010409;border-bottom-color:#21262d}
+header .ht{color:#e6edf3}
+header .hs,#hdr-rf{color:#9aa4af}
+header .hl>div{border-left-color:#30363d !important}
+.tab-bar{background:#010409;border-bottom-color:#21262d}
+.tab{color:#9aa4af}
+.tab.active{color:#fff;border-bottom-color:var(--blue)}
+.tab:hover:not(.active){color:#fff}
+/* ── Card surfaces: subtle professional lift ─────────────────────────────── */
+.sig-card,.chart-card,.chart-wide,.tcard,.hm-cell,.cio-card{box-shadow:var(--sh)}
+/* ── Layout ──────────────────────────────────────────────────────────── */
+main{max-width:1720px;margin:0 auto;padding:20px 28px}
+/* ── Signal strip ────────────────────────────────────────────────────── */
+.signal-strip{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap}
+.sig-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+  padding:8px 14px;display:flex;align-items:center;gap:8px;flex:1;min-width:140px}
+.sig-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.sig-green{background:var(--green)} .sig-yellow{background:var(--yellow)} .sig-red{background:var(--red)} .sig-gray{background:var(--dim)}
+.sig-lbl{font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);line-height:1}
+.sig-val{font-size:14px;font-weight:600;color:var(--text);margin-top:2px}
+/* ── Section heading ──────────────────────────────────────────────────── */
+.sec-hdr{display:flex;align-items:center;gap:10px;margin-bottom:14px;padding-bottom:8px;
+  border-bottom:1px solid var(--border)}
+.sec-title{font-size:15px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)}
+.sec-desc{font-size:13px;color:var(--dim)}
+/* ── KPI cards ────────────────────────────────────────────────────────── */
+.kpi-grid{display:grid;gap:8px;margin-bottom:16px}
+.g4{grid-template-columns:repeat(4,1fr)}
+.g5{grid-template-columns:repeat(5,1fr)}
+.g6{grid-template-columns:repeat(6,1fr)}
+.g8{grid-template-columns:repeat(8,1fr)}
+@media(max-width:1500px){.g8{grid-template-columns:repeat(4,1fr)}.g6{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:900px){.g8,.g6,.g5,.g4{grid-template-columns:repeat(2,1fr)}}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+  padding:12px 14px;position:relative;box-shadow:var(--sh);transition:border-color .15s,box-shadow .15s}
+.kpi:hover{border-color:#afb8c1;box-shadow:0 3px 8px rgba(27,31,36,.10)}
+.kpi-accent{position:absolute;top:0;left:0;width:3px;height:100%;border-radius:var(--r) 0 0 var(--r)}
+.kpi-horizon{position:absolute;top:9px;right:10px;font-size:10px;font-weight:700;
+  letter-spacing:.6px;text-transform:uppercase;color:var(--dim)}
+.kpi-lbl{font-size:12px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;
+  color:var(--muted);margin-bottom:4px}
+.kpi-val{font-size:24px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+.kpi-chg{font-size:13px;font-weight:600;margin-top:4px}
+.kpi-note{font-size:12px;color:var(--dim);margin-top:3px;line-height:1.3}
+.up{color:var(--green)} .dn{color:var(--red)} .nc{color:var(--muted)}
+.ref-tag{font-size:11px;padding:1px 5px;border-radius:3px;font-weight:700;margin-left:4px}
+.ref-up{background:var(--green-bg);color:var(--green)} .ref-dn{background:var(--red-bg);color:var(--red)}
+/* ── Chart grid ───────────────────────────────────────────────────────── */
+.chart-grid{display:grid;gap:10px;margin-bottom:18px}
+.cg3{grid-template-columns:repeat(3,1fr)} .cg2{grid-template-columns:repeat(2,1fr)}
+.cg2x2{grid-template-columns:repeat(2,1fr)}
+@media(max-width:1200px){.cg3{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:700px){.cg3,.cg2{grid-template-columns:1fr}}
+.chart-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px 10px}
+.chart-hdr{margin-bottom:8px}
+.chart-title{font-size:13px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;
+  color:var(--muted);display:flex;justify-content:space-between;align-items:flex-start}
+.chart-q{font-size:12px;color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0;
+  margin-top:2px;font-style:italic}
+.chart-wrap{height:158px;position:relative}
+.chart-card[style*="grid-column:1 / -1"] .chart-wrap{height:440px}
+.chart-load{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-size:13px;color:var(--dim)}
+/* ── Full-width chart card ───────────────────────────────────────────── */
+.chart-wide{background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+  padding:12px 14px 10px;margin-bottom:10px}
+.chart-wide .chart-wrap{height:200px}
+/* ── Data table ───────────────────────────────────────────────────────── */
+.tcard{background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+  overflow:hidden;margin-bottom:20px}
+.tw{overflow-x:auto;max-height:400px;overflow-y:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+thead th{background:var(--card2);color:var(--muted);font-size:12px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.4px;padding:8px 12px;white-space:nowrap;
+  position:sticky;top:0;z-index:5;cursor:pointer;user-select:none;border-bottom:1px solid var(--border)}
+thead th:hover{color:var(--text)}
+th.sa::after{content:' ▲';font-size:10px;color:var(--blue)} th.sd::after{content:' ▼';font-size:10px;color:var(--blue)}
+tbody tr{border-bottom:1px solid var(--border2);transition:background .1s}
+tbody tr:hover{background:var(--card2)}
+td{padding:6px 12px;white-space:nowrap;color:var(--text)}
+td.r{text-align:right;font-variant-numeric:tabular-nums}
+td.dim{color:var(--dim);font-size:13px}
+.badge{display:inline-block;padding:2px 7px;border-radius:3px;font-size:12px;font-weight:700}
+/* ── Regime banner ────────────────────────────────────────────────────── */
+.regime-banner{border-radius:var(--r);padding:14px 20px;margin-bottom:18px;
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;
+  border:1px solid}
+.regime-name{font-size:22px;font-weight:800;letter-spacing:.5px}
+.regime-sub{font-size:13px;margin-top:3px;opacity:.8}
+.regime-meta{display:flex;gap:20px;align-items:center;flex-wrap:wrap}
+.regime-q{font-size:13px}
+/* ── Heatmap ──────────────────────────────────────────────────────────── */
+.heatmap{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:18px}
+@media(max-width:1100px){.heatmap{grid-template-columns:repeat(2,1fr)}}
+.hm-cell{background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+  padding:10px 12px;display:flex;align-items:center;gap:10px}
+.hm-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.hm-body .lbl{font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--muted)}
+.hm-body .val{font-size:16px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--text)}
+.hm-body .note{font-size:12px;color:var(--dim);margin-top:1px}
+/* ── Vanda positioning group header ───────────────────────────────────── */
+.vanda-grp-hdr{font-size:13px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;
+  color:var(--muted);margin:6px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--border)}
+/* ── CIO 5 panel ──────────────────────────────────────────────────────── */
+.cio-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:18px}
+@media(max-width:1200px){.cio-grid{grid-template-columns:repeat(3,1fr)}}
+.cio-card{background:var(--card2);border:1px solid var(--border);border-radius:var(--r);
+  padding:12px 14px;border-left:3px solid var(--accent-c,#58a6ff)}
+.cio-num{font-size:30px;font-weight:900;font-variant-numeric:tabular-nums;line-height:1}
+.cio-lbl{font-size:12px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;
+  color:var(--muted);margin-bottom:4px}
+.cio-chg{font-size:13px;font-weight:600;margin-top:4px}
+.cio-why{font-size:12px;color:var(--dim);margin-top:3px}
+/* ── Horizon tags ─────────────────────────────────────────────────────── */
+.hz{display:inline-block;padding:1px 6px;border-radius:3px;font-size:11px;font-weight:700;
+  letter-spacing:.4px;text-transform:uppercase;margin-left:4px}
+.hz-t{background:var(--blue-bg,rgba(9,105,218,.12));color:var(--blue)}    /* tactical */
+.hz-c{background:var(--yellow-bg);color:var(--yellow)}                    /* cyclical */
+.hz-s{background:var(--green-bg);color:var(--green)}                      /* structural */
+/* ── Divider ──────────────────────────────────────────────────────────── */
+.divider{height:1px;background:var(--border);margin:18px 0}
+/* ── Empty ────────────────────────────────────────────────────────────── */
+.empty{text-align:center;padding:36px;color:var(--dim)}
+.empty h3{font-size:18px;margin-bottom:6px;color:var(--muted)}
+/* ── KPI clickable ────────────────────────────────────────────────────── */
+.kpi.clickable{cursor:pointer}
+.kpi.clickable:hover{border-color:var(--blue);transform:translateY(-1px);
+  box-shadow:0 4px 16px rgba(88,166,255,.18)}
+/* ── Inline chart period buttons ─────────────────────────────────────── */
+.chart-period-bar{display:flex;gap:4px;margin-top:4px;flex-wrap:wrap}
+.cperiod-btn{padding:2px 8px;border-radius:3px;border:1px solid var(--border);
+  background:transparent;color:var(--dim);font-size:12px;font-weight:600;
+  cursor:pointer;transition:all .12s}
+.cperiod-btn:hover{border-color:#afb8c1;color:var(--muted)}
+.cperiod-btn.active{background:rgba(88,166,255,.15);border-color:var(--blue);color:var(--blue)}
+/* ── Chart modal ──────────────────────────────────────────────────────── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1000;
+  display:flex;align-items:center;justify-content:center;padding:20px;
+  opacity:0;pointer-events:none;transition:opacity .2s}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal-box{background:var(--card);border:1px solid var(--border);border-radius:10px;
+  width:100%;max-width:860px;padding:22px 26px;position:relative;
+  transform:scale(.97);transition:transform .2s}
+.modal-overlay.open .modal-box{transform:scale(1)}
+.modal-close{position:absolute;top:12px;right:14px;background:none;border:none;
+  cursor:pointer;color:var(--muted);font-size:22px;line-height:1;padding:4px 8px;
+  border-radius:4px;transition:background .1s}
+.modal-close:hover{background:var(--card2);color:var(--text)}
+.modal-title{font-size:18px;font-weight:700;letter-spacing:.3px;color:var(--text);margin-bottom:2px}
+.modal-sub{font-size:13px;color:var(--dim);margin-bottom:14px;font-family:monospace}
+.period-bar{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.period-btn{padding:5px 14px;border-radius:4px;border:1px solid var(--border);
+  background:var(--card2);color:var(--muted);font-size:13px;font-weight:600;
+  cursor:pointer;transition:all .15s}
+.period-btn:hover{border-color:#afb8c1;color:var(--text)}
+.period-btn.active{background:var(--blue);border-color:var(--blue);color:#fff}
+.modal-chart-wrap{height:340px;position:relative}
+.modal-chart-load{position:absolute;inset:0;display:flex;align-items:center;
+  justify-content:center;font-size:14px;color:var(--dim)}
+.rc-edit.rc-empty:before{content:attr(data-placeholder);color:var(--dim);font-style:italic}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hl">
+    <img src="jcap-logo.png" style="height:38px;flex-shrink:0">
+    <div style="border-left:1px solid var(--border);padding-left:14px">
+      <div class="ht">Macro Dashboard</div>
+      <div class="hs">Equity Book</div>
+    </div>
+  </div>
+  <div class="hr">
+    <div id="hdr-rf"></div>
+    <button class="btn" id="btn-xl" onclick="doExport()"
+            style="background:#1f6feb">⤓ Export</button>
+    <button class="btn" id="btn-rf" onclick="doRefresh()">⟳ Refresh</button>
+  </div>
+</header>
+
+<div class="tab-bar">
+  <button class="tab active" id="tb-ov"     onclick="switchTab('ov')">Position</button>
+  <button class="tab"        id="tb-econ"   onclick="switchTab('econ')">Economy</button>
+  <button class="tab"        id="tb-money"  onclick="switchTab('money')">Liquidity Risk</button>
+  <button class="tab"        id="tb-mkts"   onclick="switchTab('mkts')">Data</button>
+  <button class="tab"        id="tb-equity" onclick="switchTab('equity')">Equity</button>
+</div>
+
+<main>
+
+<!-- ═══════════ OVERVIEW / POSITION ═══════════ -->
+<div class="tc active" id="tc-ov">
+
+  <!-- 1. Vanda Positioning (CSV-backed, auto-refreshes 06:05) -->
+  <div class="sec-hdr">
+    <div class="sec-title">Vanda Positioning</div>
+    <div class="chart-period-bar" id="vanda-period-bar">
+      <button class="cperiod-btn" onclick="renderVanda(1,this)">1Y</button>
+      <button class="cperiod-btn active" onclick="renderVanda(2,this)">2Y</button>
+      <button class="cperiod-btn" onclick="renderVanda(5,this)">5Y</button>
+      <button class="cperiod-btn" onclick="renderVanda(0,this)">All</button>
+    </div>
+  </div>
+  <div id="vanda-asof" style="font-size:12px;color:var(--dim);margin:-4px 0 10px">Combined positioning z-score · source CSVs update ~06:00 daily · charts auto-refresh 06:05</div>
+  <div class="vanda-grp-hdr">Equities</div>
+  <div class="chart-grid cg3" id="vanda-equities" style="margin-bottom:14px"></div>
+  <div class="vanda-grp-hdr">Commodities</div>
+  <div class="chart-grid cg3" id="vanda-commodities" style="margin-bottom:18px"></div>
+
+  <!-- 2. Macro Regime — banner + quadrant -->
+  <div class="sec-hdr"><div class="sec-title">Macro Regime Quadrant</div></div>
+  <div id="regime-banner-ov" class="regime-banner" style="background:var(--card2);border-color:var(--border);margin-bottom:12px">
+    <div>
+      <div id="rb-label" class="regime-name" style="color:var(--muted)">Loading regime…</div>
+      <div id="rb-sub"   class="regime-sub">Refresh to load Bloomberg data</div>
+    </div>
+    <div class="regime-meta" id="rb-meta"></div>
+  </div>
+  <div id="quadrant-grid" style="margin-bottom:18px"></div>
+
+  <!-- 2b. Macro Regime — history ribbon (each date coloured by its regime) -->
+  <div class="sec-hdr"><div class="sec-title">Macro Regime — History</div>
+    <div class="sec-desc" style="font-size:12px;color:var(--dim)">Each month classified by the sign of the two 7-year scores (growth = SPX − Oil · inflation = Gold − 10Y UST TR) · ~1997 → today</div>
+  </div>
+  <div id="regime-timeline" style="margin-bottom:18px"></div>
+
+  <!-- 2b2. Gold-to-S&P 500 Dividend Ratio (Gavekal) — daily, log -->
+  <div class="sec-hdr"><div class="sec-title">Gold-to-S&P 500 Dividend Ratio</div>
+    <div class="sec-desc" style="font-size:12px;color:var(--dim)">Price of 1g of gold as a multiple of the trailing SPX dividend/share — (XAU/31.1035) ÷ (SPX × DvdYld/100) · log scale · <b>up = gold expensive / shares cheap vs gold</b> · blue = 7-year MA · grey bands = NBER recessions · daily since 2000 · long-run mean ≈ 1</div>
+  </div>
+  <div class="chart-grid" id="ov-divgold" style="margin-bottom:18px"></div>
+
+  <!-- 2c. US Treasury Yields (2Y / 5Y / 10Y) -->
+  <div class="sec-hdr"><div class="sec-title">US Treasury Yields</div></div>
+  <div class="chart-grid cg3" id="ov-ust-yields" style="margin-bottom:18px"></div>
+
+  <!-- 3. Research Consensus (editable notes, persist to localStorage) -->
+  <div class="sec-hdr"><div class="sec-title">Research Consensus</div>
+    <div class="sec-desc" style="font-size:12px;color:var(--dim)">Auto-saves to this browser · click any block to edit</div>
+  </div>
+  <div id="research-consensus" style="background:var(--card);border:1px solid var(--border);
+       border-radius:var(--r);padding:14px 16px;margin-bottom:18px;
+       display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+    <div data-rc-key="growth">
+      <div style="font-size:13px;font-weight:700;color:#0969da;margin-bottom:4px;letter-spacing:.04em">GROWTH</div>
+      <div class="rc-edit" contenteditable="true" style="font-size:14px;color:#1f2328;min-height:60px;
+           outline:none;border:1px dashed transparent;padding:4px;border-radius:4px"
+           data-placeholder="Sell-side / buyside view on growth…"></div>
+    </div>
+    <div data-rc-key="inflation">
+      <div style="font-size:13px;font-weight:700;color:#d29922;margin-bottom:4px;letter-spacing:.04em">INFLATION</div>
+      <div class="rc-edit" contenteditable="true" style="font-size:14px;color:#1f2328;min-height:60px;
+           outline:none;border:1px dashed transparent;padding:4px;border-radius:4px"
+           data-placeholder="Consensus on CPI / PCE path…"></div>
+    </div>
+    <div data-rc-key="rates">
+      <div style="font-size:13px;font-weight:700;color:#7c3aed;margin-bottom:4px;letter-spacing:.04em">RATES & POLICY</div>
+      <div class="rc-edit" contenteditable="true" style="font-size:14px;color:#1f2328;min-height:60px;
+           outline:none;border:1px dashed transparent;padding:4px;border-radius:4px"
+           data-placeholder="Fed path · curve view…"></div>
+    </div>
+    <div data-rc-key="risk">
+      <div style="font-size:13px;font-weight:700;color:#1a7f37;margin-bottom:4px;letter-spacing:.04em">RISK ASSETS</div>
+      <div class="rc-edit" contenteditable="true" style="font-size:14px;color:#1f2328;min-height:60px;
+           outline:none;border:1px dashed transparent;padding:4px;border-radius:4px"
+           data-placeholder="Equity / credit / FX positioning…"></div>
+    </div>
+  </div>
+
+  <!-- 4. Regime-Favored Assets (backtested) -->
+  <div class="sec-hdr"><div class="sec-title">Regime-Favored Assets</div></div>
+  <div style="font-size:12px;line-height:1.6;color:var(--dim);margin:-4px 0 12px;max-width:920px">
+    Ranks assets by their historical <b>3-month forward return</b> in the current regime. Each past month is matched to today by macro conditions
+    (7yr growth = SPX − Oil, inflation = Gold − 10Y UST TR) and by Vanda positioning, then we measure the 3-month forward return.
+    <b>3M Return</b> = the weighted-average 3-month forward return across those matched months. <b>Win%</b> = how often that return was positive.
+    Fully deterministic — no models or randomness.
+  </div>
+  <div id="regime-picks" style="margin-bottom:18px">
+    <div style="text-align:center;color:var(--dim);font-size:13px;padding:24px">Loading backtest…</div>
+  </div>
+
+</div>
+
+<!-- ═══════════ ECONOMY ═══════════ -->
+<div class="tc" id="tc-econ">
+  <div id="sections-econ"></div>
+  <div class="divider"></div>
+  <div class="sec-hdr"><div class="sec-title">All Indicators</div></div>
+  <div class="tcard"><div class="tw"><table id="tbl-econ"><thead><tr>
+    <th onclick="srt('tbl-econ',0)">Indicator</th><th>Category</th>
+    <th onclick="srt('tbl-econ',2)" class="r">Latest</th>
+    <th onclick="srt('tbl-econ',3)" class="r">Change</th>
+    <th onclick="srt('tbl-econ',4)" class="r">Last Update</th>
+    <th onclick="srt('tbl-econ',5)">Bloomberg Ticker</th>
+  </tr></thead><tbody id="tbd-econ"></tbody></table></div></div>
+</div>
+
+<!-- ═══════════ MONEY & RATES ═══════════ -->
+<div class="tc" id="tc-money">
+  <div id="sections-money"></div>
+  <div class="divider"></div>
+  <div class="sec-hdr"><div class="sec-title">All Indicators</div></div>
+  <div class="tcard"><div class="tw"><table id="tbl-money"><thead><tr>
+    <th onclick="srt('tbl-money',0)">Indicator</th><th>Category</th>
+    <th onclick="srt('tbl-money',2)" class="r">Latest</th>
+    <th onclick="srt('tbl-money',3)" class="r">Change</th>
+    <th onclick="srt('tbl-money',4)" class="r">Last Update</th>
+    <th onclick="srt('tbl-money',5)">Bloomberg Ticker</th>
+  </tr></thead><tbody id="tbd-money"></tbody></table></div></div>
+</div>
+
+<!-- ═══════════ EQUITY ═══════════ -->
+<div class="tc" id="tc-equity">
+  <div id="equity-legend" style="display:flex;flex-wrap:wrap;gap:18px;align-items:center;
+       background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+       padding:10px 16px;margin-bottom:12px;font-size:14px;color:#1f2328">
+    <span style="font-weight:600;color:#000">Color key:</span>
+    <span style="display:inline-flex;align-items:center;gap:6px">
+      <span style="width:11px;height:11px;border-radius:50%;background:#1a7f37;display:inline-block"></span>
+      <span><b>Green:</b> ↑ YoY · ↑ WoW (strong trend)</span>
+    </span>
+    <span style="display:inline-flex;align-items:center;gap:6px">
+      <span style="width:11px;height:11px;border-radius:50%;background:#e36209;display:inline-block"></span>
+      <span><b>Orange:</b> ↑ YoY · ↓ WoW (correction)</span>
+    </span>
+    <span style="display:inline-flex;align-items:center;gap:6px">
+      <span style="width:11px;height:11px;border-radius:50%;background:#eac54f;display:inline-block"></span>
+      <span><b>Yellow:</b> ↓ YoY · ↑ WoW (bottoming)</span>
+    </span>
+    <span style="display:inline-flex;align-items:center;gap:6px">
+      <span style="width:11px;height:11px;border-radius:50%;background:#cf222e;display:inline-block"></span>
+      <span><b>Red:</b> ↓ YoY · ↓ WoW (weak)</span>
+    </span>
+  </div>
+  <div id="sections-equity"></div>
+</div>
+
+<!-- ═══════════ MARKETS & RISK ═══════════ -->
+<div class="tc" id="tc-mkts">
+  <div id="sections-mkts"></div>
+  <div class="divider"></div>
+  <div class="sec-hdr"><div class="sec-title">All Indicators</div></div>
+  <div class="tcard"><div class="tw"><table id="tbl-mkts"><thead><tr>
+    <th onclick="srt('tbl-mkts',0)">Indicator</th><th>Category</th>
+    <th onclick="srt('tbl-mkts',2)" class="r">Latest</th>
+    <th onclick="srt('tbl-mkts',3)" class="r">Change</th>
+    <th onclick="srt('tbl-mkts',4)" class="r">Last Update</th>
+    <th onclick="srt('tbl-mkts',5)">Bloomberg Ticker</th>
+  </tr></thead><tbody id="tbd-mkts"></tbody></table></div></div>
+</div>
+
+</main>
+
+<!-- ═══════════ CHART MODAL ═══════════ -->
+<div class="modal-overlay" id="chart-modal" onclick="closeChartModal(event)">
+  <div class="modal-box">
+    <button class="modal-close" onclick="document.getElementById('chart-modal').classList.remove('open')">✕</button>
+    <div class="modal-title" id="modal-title">—</div>
+    <div class="modal-sub"   id="modal-sub">—</div>
+    <div class="period-bar"  id="modal-period-bar">
+      <button class="period-btn" onclick="loadModalChart(0.25,this)">3M</button>
+      <button class="period-btn" onclick="loadModalChart(0.5,this)">6M</button>
+      <button class="period-btn" onclick="loadModalChart(1,this)">1Y</button>
+      <button class="period-btn active" onclick="loadModalChart(2,this)">2Y</button>
+      <button class="period-btn" onclick="loadModalChart(5,this)">5Y</button>
+      <button class="period-btn" onclick="loadModalChart(10,this)">10Y</button>
+    </div>
+    <div class="modal-chart-wrap">
+      <div class="modal-chart-load" id="modal-chart-load">Select an indicator</div>
+      <canvas id="modal-canvas" style="display:none"></canvas>
+    </div>
+  </div>
+</div>
+
+<footer style="text-align:center;padding:14px;color:var(--dim);font-size:13px;border-top:1px solid var(--border)">
+  JCAP Macro Dashboard · Bloomberg Professional Data · For internal use only
+</footer>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════
+// FETCH SHIM — when the dashboard is opened via ngrok (the tunnel at
+// jcapmacrodashboard.ngrok.app), the very first /api/* fetch from each
+// browser gets intercepted by ngrok's "you are about to visit..." HTML
+// splash unless we send the `ngrok-skip-browser-warning` header. Without
+// it the front end sees `<!DOCTYPE html>` instead of JSON and bombs with
+// "Unexpected token '<'". Patch fetch once so every /api/ call gets the
+// bypass header automatically.
+(function() {
+  const _origFetch = window.fetch.bind(window);
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+  async function _fetchWithRetry(input, init, busted, attempt) {
+    const resp = await _origFetch(busted, init);
+    // ngrok's free tier returns 502/503/504 with an HTML body when the
+    // tunnel is congested. Retry up to 3 times with backoff so transient
+    // gateway errors don't surface as "Unexpected token '<'" in chart UIs.
+    if ((resp.status === 502 || resp.status === 503 || resp.status === 504) && attempt < 3) {
+      await sleep(400 * (attempt + 1));
+      return _fetchWithRetry(input, init, busted, attempt + 1);
+    }
+    // If the server returned 2xx but the body is the ngrok splash HTML, retry
+    // once — the second hit usually carries the skip header. Only retry on an
+    // actual HTML body: matching "anything not JSON" wrongly re-fetched the
+    // binary /api/export (.xlsx) workbook three times per click.
+    if (resp.ok && attempt < 2) {
+      const ct = resp.headers.get('content-type') || '';
+      if (ct.includes('text/html')) {
+        await sleep(300);
+        return _fetchWithRetry(input, init, busted, attempt + 1);
+      }
+    }
+    return resp;
+  }
+
+  const _seriesMemo = new Map();
+  const _memoKey = (url) => url.replace(/[?&]_=\d+/g, '').replace(/\?$/, '');
+  const _isCacheable = (url) =>
+    url.includes('/api/series/') && !url.includes('refresh=1');
+  const _jsonResp = text => new Response(text, {
+    status: 200, headers: {'Content-Type': 'application/json; charset=utf-8'}
+  });
+
+  window.fetch = function(input, init) {
+    let url = (typeof input === 'string') ? input
+            : (input && input.url) ? input.url : '';
+    const isApi = url.startsWith('/api/') || url.includes('/api/');
+    if (!isApi) return _origFetch(input, init);
+
+    const isGet = !init || init.method === undefined || init.method === 'GET';
+    const cacheable = isGet && _isCacheable(url);
+
+    if (cacheable) {
+      const hit = _seriesMemo.get(_memoKey(url));
+      if (hit) return hit.then(t => _jsonResp(t));
+    }
+
+    init = init || {};
+    const h = new Headers(init.headers || {});
+    h.set('ngrok-skip-browser-warning', '1');
+    h.set('Cache-Control', 'no-store, no-cache, max-age=0');
+    h.set('Pragma', 'no-cache');
+    init.headers = h;
+    init.cache = 'no-store';
+    const sep = url.includes('?') ? '&' : '?';
+    const busted = (typeof input === 'string')
+                 ? input + sep + '_=' + Date.now()
+                 : input;
+
+    if (!cacheable) return _fetchWithRetry(input, init, busted, 0);
+
+    const key = _memoKey(url);
+    const textP = _fetchWithRetry(input, init, busted, 0).then(resp => {
+      if (resp.ok && (resp.headers.get('content-type') || '').includes('json'))
+        return resp.text();
+      throw new Error(resp.status + ' ' + resp.statusText);
+    }).catch(err => { _seriesMemo.delete(key); throw err; });
+    _seriesMemo.set(key, textP);
+    return textP.then(t => _jsonResp(t));
+  };
+
+  window._flushSeriesMemo = () => _seriesMemo.clear();
+})();
+
+// ═══════════════════════════════════════════════════════════════════════
+// RESEARCH CONSENSUS — editable per-pane notes persisted in localStorage
+// ═══════════════════════════════════════════════════════════════════════
+(function() {
+  const STORAGE = 'rc-notes-v1';
+  const saved   = JSON.parse(localStorage.getItem(STORAGE) || '{}');
+  const initRC = () => {
+    document.querySelectorAll('#research-consensus [data-rc-key]').forEach(grp => {
+      const key = grp.dataset.rcKey;
+      const ed  = grp.querySelector('.rc-edit');
+      if (!ed) return;
+      if (saved[key]) ed.textContent = saved[key];
+      const updatePlaceholder = () => {
+        ed.classList.toggle('rc-empty', !ed.textContent.trim());
+      };
+      updatePlaceholder();
+      ed.addEventListener('input', () => {
+        saved[key] = ed.textContent;
+        localStorage.setItem(STORAGE, JSON.stringify(saved));
+        updatePlaceholder();
+      });
+      ed.addEventListener('focus', () => ed.style.borderColor = '#d0d7de');
+      ed.addEventListener('blur',  () => ed.style.borderColor = 'transparent');
+    });
+  };
+  if (document.readyState === 'loading')
+    document.addEventListener('DOMContentLoaded', initRC);
+  else initRC();
+})();
+
+// ═══════════════════════════════════════════════════════════════════════
+// DATA CONFIG
+// ═══════════════════════════════════════════════════════════════════════
+
+// Signal thresholds — only live tickers (Green/Yellow/Red)
+const SIG = {
+  'M2% YOY Index':   {hi:5,   lo:0,   dir:1,  label:'US M2 YoY',  fmt:'1f', unit:'%'},
+  'DXY Curncy':      {hi:107, lo:100, dir:-1, label:'DXY',        fmt:'2f', unit:''},
+  'GT10 Govt':       {hi:4.5, lo:3.5, dir:0,  label:'10Y UST',    fmt:'2f', unit:'%'},
+  'NAPMPMI Index':   {hi:52,  lo:50,  dir:1,  label:'ISM Mfg',    fmt:'1f', unit:'', ref:50},
+  'NAPMNMI Index':   {hi:52,  lo:50,  dir:1,  label:'ISM Svcs',   fmt:'1f', unit:'', ref:50},
+  'CPI YOY Index':   {hi:3.5, lo:2.5, dir:-1, label:'US CPI',     fmt:'1f', unit:'%'},
+  'PCE CYOY Index':  {hi:3.5, lo:2.5, dir:-1, label:'Core PCE',   fmt:'1f', unit:'%'},
+  'CDX HY CDSI GEN 5Y SPRD Corp': {hi:500, lo:350, dir:-1, label:'CDX HY', fmt:'0f', unit:'bps'},
+  'CDX IG CDSI GEN 5Y Corp':      {hi:80,  lo:60,  dir:-1, label:'CDX IG', fmt:'0f', unit:'bps'},
+  'CVIX Index':      {hi:10,  lo:7,   dir:-1, label:'CVIX',       fmt:'2f', unit:''},
+  'CHEFTYOY Index':  {hi:1,   lo:-1,  dir:1,  label:'China PPI',  fmt:'1f', unit:'%'},
+  'MPMIEZCA Index':  {hi:52,  lo:50,  dir:1,  label:'EA Comp PMI',fmt:'1f', unit:'', ref:50},
+};
+
+function getSignal(ticker) {
+  const cfg = SIG[ticker];
+  if (!cfg) return 'gray';
+  const v = gData.metrics[ticker]?.value;
+  if (v === null || v === undefined) return 'gray';
+  if (cfg.dir >= 0)  return v > cfg.hi ? 'green' : v > cfg.lo ? 'yellow' : 'red';
+  else               return v < cfg.lo ? 'green' : v < cfg.hi ? 'yellow' : 'red';
+}
+
+// ── CONFIG per tab ───────────────────────────────────────────────────────
+const CFG = {
+
+  // ════════════════════════════════════════════════════════════════════
+  // ECONOMY tab — growth, inflation, labour, surveys, external balances
+  // ════════════════════════════════════════════════════════════════════
+  econ: {
+    sections: [
+      {
+        // Cross-region composite-PMI overlay — relocated here from the old
+        // Position-tab "Global Macro Pulse" panel (the one chart not already
+        // covered elsewhere). Sits first as a global growth read-through.
+        id:'global_pulse', title:'Global Growth Pulse', cols:3,
+        kpis:[
+          {label:'US ISM Mfg',      ticker:'NAPMPMI Index',  fmt:'1f', unit:'', hz:'C', accent:'#b22234', ref:50},
+          {label:'EA Composite PMI',ticker:'MPMIEZCA Index', fmt:'1f', unit:'', hz:'C', accent:'#003399', ref:50},
+          {label:'EM Composite PMI',ticker:'MPMIEMCA Index', fmt:'1f', unit:'', hz:'C', accent:'#1e3a5f', ref:50},
+        ],
+        charts:[
+          {title:'Global PMI: US / EA / EM', tickers:['NAPMPMI Index','MPMIEZCA Index','MPMIEMCA Index'], labels:['US ISM','EA Comp','EM Comp'], colors:['#b22234','#003399','#1e3a5f'], p:'MONTHLY', y:5, refLine:50},
+        ]
+      },
+      {
+        id:'us_growth', title:'US Growth & Activity', cols:5,
+        kpis:[
+          {label:'ISM Manufacturing', ticker:'NAPMPMI Index',  fmt:'1f', unit:'',  hz:'C', accent:'#1e40af', ref:50},
+          {label:'ISM Services',      ticker:'NAPMNMI Index',  fmt:'1f', unit:'',  hz:'C', accent:'#2563eb', ref:50},
+          {label:'GDP QoQ Ann.',      ticker:'GDP CQOQ Index', fmt:'1f', unit:'%', hz:'C', accent:'#3fb950'},
+          {label:'Retail Sales MoM',  ticker:'RSTAMOM Index',  fmt:'1f', unit:'%', hz:'T', accent:'#059669'},
+          {label:'Retail Sales YoY',  ticker:'RSTAYOY Index',  fmt:'1f', unit:'%', hz:'T', accent:'#10b981'},
+          {label:'Housing Starts',    ticker:'NHSPSTOT Index', fmt:'0f', unit:'K', hz:'T', accent:'#7c3aed'},
+        ],
+        charts:[
+          {title:'ISM Manufacturing & Services', tickers:['NAPMPMI Index','NAPMNMI Index'], labels:['ISM Mfg','ISM Svcs'], colors:['#1e40af','#16a34a'], p:'MONTHLY', y:5, refLine:50},
+          {title:'GDP QoQ Annualised (%)',       tickers:['GDP CQOQ Index'], labels:['GDP'], colors:['#3fb950'], p:'QUARTERLY', y:5, refLine:0},
+        ]
+      },
+      {
+        id:'us_labour', title:'US Labour', cols:5,
+        kpis:[
+          {label:'Nonfarm Payrolls',   ticker:'NFP TCH Index',   fmt:'0f', unit:'K',   hz:'T', accent:'#16a34a'},
+          {label:'Unemployment Rate',  ticker:'USURTOT Index',   fmt:'1f', unit:'%',   hz:'T', accent:'#f97316'},
+          {label:'Initial Jobless Claims',ticker:'INJCJC Index', fmt:'0f', unit:'K',   hz:'T', accent:'#dc2626'},
+          {label:'JOLTS Job Openings', ticker:'JOLTTOTL Index',  fmt:'0f', unit:'K',   hz:'T', accent:'#7c3aed'},
+          {label:'ISM Svcs Employment',ticker:'NAPMNEMP Index',  fmt:'1f', unit:'',    hz:'C', accent:'#0891b2', ref:50},
+        ],
+        charts:[
+          {title:'Nonfarm Payrolls (K)',         tickers:['NFP TCH Index'], labels:['NFP'], colors:['#16a34a'], p:'MONTHLY', y:5, refLine:0},
+          {title:'Initial Jobless Claims (K)',   tickers:['INJCJC Index'],  labels:['Claims'], colors:['#dc2626'], p:'WEEKLY', y:3},
+          {title:'JOLTS Job Openings (K)',       tickers:['JOLTTOTL Index'],labels:['JOLTS'],  colors:['#7c3aed'], p:'MONTHLY', y:5},
+          {title:'ISM Services Employment',      tickers:['NAPMNEMP Index'],labels:['Svcs Emp'],colors:['#0891b2'], p:'MONTHLY', y:5, refLine:50},
+        ]
+      },
+      {
+        id:'us_infl', title:'US Inflation', cols:4,
+        kpis:[
+          {label:'CPI YoY',          ticker:'CPI YOY Index',  fmt:'1f', unit:'%', hz:'T', accent:'#f97316'},
+          {label:'CPI MoM',          ticker:'CPI CHNG Index', fmt:'2f', unit:'%', hz:'T', accent:'#d29922'},
+          {label:'Core PCE YoY',     ticker:'PCE CYOY Index', fmt:'1f', unit:'%', hz:'C', accent:'#dc2626'},
+          {label:'CPI Quarterly SAAR',ticker:'CPIQCSAN Index',fmt:'1f', unit:'%', hz:'C', accent:'#b91c1c'},
+        ],
+        charts:[
+          {title:'CPI vs Core PCE YoY (%)',    tickers:['CPI YOY Index','PCE CYOY Index'], labels:['CPI','Core PCE'], colors:['#f97316','#dc2626'], p:'MONTHLY', y:5, refLine:2},
+          {title:'CPI MoM (%)',                tickers:['CPI CHNG Index'], labels:['CPI MoM'], colors:['#d29922'], p:'MONTHLY', y:3, refLine:0},
+          {title:'US CPI Quarterly SAAR (%)',  tickers:['CPIQCSAN Index'], labels:['CPI Q SAAR'], colors:['#b91c1c'], p:'QUARTERLY', y:10, refLine:2},
+        ]
+      },
+      {
+        id:'us_sent', title:'US Surveys & Sentiment', cols:6,
+        kpis:[
+          {label:'Conference Board',     ticker:'CONCCONF Index', fmt:'1f', unit:'', hz:'T', accent:'#d29922'},
+          {label:'CB Present Situation', ticker:'CONCPSIT Index', fmt:'1f', unit:'', hz:'T', accent:'#ca8a04'},
+          {label:'CB Expectations',      ticker:'CONCPEXP Index', fmt:'1f', unit:'', hz:'T', accent:'#a16207'},
+          {label:'U-Mich Sentiment',     ticker:'CONSSENT Index', fmt:'1f', unit:'', hz:'T', accent:'#f97316'},
+          {label:'NFIB Optimism',        ticker:'SBOITOTL Index', fmt:'1f', unit:'', hz:'T', accent:'#16a34a'},
+          {label:'NFIB Hiring Plans',    ticker:'SBOIHIRE Index', fmt:'1f', unit:'', hz:'T', accent:'#059669'},
+        ],
+        charts:[
+          {title:'CB Confidence vs U-Mich', tickers:['CONCCONF Index','CONSSENT Index'], labels:['Conf Board','U-Mich'], colors:['#d29922','#f97316'], p:'MONTHLY', y:5},
+          {title:'CB Present vs Expectations', tickers:['CONCPSIT Index','CONCPEXP Index'], labels:['Present','Expectations'], colors:['#ca8a04','#a16207'], p:'MONTHLY', y:5},
+          {title:'NFIB Small Business Optimism & Hiring', tickers:['SBOITOTL Index','SBOIHIRE Index'], labels:['Optimism','Hiring'], colors:['#16a34a','#059669'], p:'MONTHLY', y:5},
+        ]
+      },
+      {
+        id:'us_consumer', title:'US Consumer Credit & Spending', cols:4,
+        kpis:[
+          {label:'Retail Sales ($Bn)',   ticker:'RSTATOTL Index', fmt:'1f', unit:'$Bn', hz:'T', accent:'#0891b2'},
+          {label:'Total Consumer Credit',ticker:'TDBCTOTL Index', fmt:'0f', unit:'$Bn', hz:'T', accent:'#7c3aed'},
+          {label:'Credit Card Delinq.',  ticker:'USDECRED Index', fmt:'2f', unit:'%',   hz:'T', accent:'#dc2626'},
+        ],
+        charts:[
+          {title:'US Retail Sales Level ($Bn)',     tickers:['RSTATOTL Index'], labels:['Retail Sales'], colors:['#0891b2'], p:'MONTHLY', y:5},
+          {title:'Total Consumer Credit ($Bn)',     tickers:['TDBCTOTL Index'], labels:['Credit'], colors:['#7c3aed'], p:'MONTHLY', y:5},
+          {title:'Credit Card Delinquency Rate (%)',tickers:['USDECRED Index'], labels:['CC Delinq'], colors:['#dc2626'], p:'QUARTERLY', y:10, refLine:3},
+        ]
+      },
+      {
+        id:'us_housing', title:'US Housing & Construction', cols:4,
+        kpis:[
+          {label:'Housing Starts',     ticker:'NHSPSTOT Index', fmt:'0f', unit:'K',     hz:'T', accent:'#7c3aed'},
+          {label:'New Home Sales',     ticker:'NHSLTOT Index',  fmt:'0f', unit:'K',     hz:'T', accent:'#6d28d9'},
+          {label:'Months Supply',      ticker:'NHSLMSPL Index', fmt:'1f', unit:'mo',    hz:'S', accent:'#a855f7'},
+          {label:'Construction Spend.',ticker:'CNSTPUSA Index', fmt:'1f', unit:'%',     hz:'T', accent:'#9333ea'},
+        ],
+        charts:[
+          {title:'Housing Starts vs New Home Sales (K)', tickers:['NHSPSTOT Index','NHSLTOT Index'], labels:['Starts','New Sales'], colors:['#7c3aed','#6d28d9'], p:'MONTHLY', y:5},
+          {title:'Months Supply of New Homes',          tickers:['NHSLMSPL Index'], labels:['Mo Supply'], colors:['#a855f7'], p:'MONTHLY', y:5, refLine:6},
+          {title:'Construction Spending (% YoY)',       tickers:['CNSTPUSA Index'], labels:['Constr'], colors:['#9333ea'], p:'MONTHLY', y:5, refLine:0},
+        ]
+      },
+      {
+        id:'us_recession', title:'US Recession Probability', cols:3,
+        kpis:[
+          {label:'NY Fed Recession Prob.', ticker:'NYFYPROB Index', fmt:'1f', unit:'%', hz:'C', accent:'#dc2626'},
+        ],
+        charts:[
+          {title:'NY Fed Recession Probability (NTM, %)', tickers:['NYFYPROB Index'], labels:['Prob'], colors:['#dc2626'], p:'MONTHLY', y:10, refLine:30},
+        ]
+      },
+      {
+        id:'cn_macro', title:'China Growth & Inflation', cols:6,
+        kpis:[
+          {label:'Industrial Prod. YoY', ticker:'CHVAIOY Index',  fmt:'1f', unit:'%', hz:'T', accent:'#059669'},
+          {label:'Retail Sales YoY',     ticker:'CNRSCYOY Index', fmt:'1f', unit:'%', hz:'T', accent:'#10b981'},
+          {label:'Fixed Asset Inv. YoY', ticker:'CNFAYOY Index',  fmt:'1f', unit:'%', hz:'T', accent:'#16a34a'},
+          {label:'Caixin Composite PMI', ticker:'MPMICNCA Index', fmt:'1f', unit:'',  hz:'C', accent:'#dc2626', ref:50},
+          {label:'China CPI YoY',        ticker:'CNCPIYOY Index', fmt:'1f', unit:'%', hz:'C', accent:'#d29922'},
+          {label:'China PPI YoY',        ticker:'CHEFTYOY Index', fmt:'1f', unit:'%', hz:'C', accent:'#dc2626'},
+        ],
+        charts:[
+          {title:'IP & Retail Sales YoY (%)',      tickers:['CHVAIOY Index','CNRSCYOY Index'], labels:['IP','Retail'], colors:['#059669','#0891b2'], p:'MONTHLY', y:5},
+          {title:'Fixed Asset Investment YoY (%)', tickers:['CNFAYOY Index'], labels:['FAI'], colors:['#16a34a'], p:'MONTHLY', y:5, refLine:0},
+          {title:'China CPI vs PPI YoY (%)',       tickers:['CNCPIYOY Index','CHEFTYOY Index'], labels:['CPI','PPI'], colors:['#d29922','#dc2626'], p:'MONTHLY', y:5, refLine:0},
+          {title:'China Caixin Composite PMI',     tickers:['MPMICNCA Index'], labels:['Caixin'], colors:['#dc2626'], p:'MONTHLY', y:5, refLine:50},
+        ]
+      },
+      {
+        id:'eu_macro', title:'Europe Growth & Labour', cols:5,
+        kpis:[
+          {label:'EA Composite PMI',  ticker:'MPMIEZCA Index', fmt:'1f', unit:'',  hz:'C', accent:'#003399', ref:50},
+          {label:'EA Mfg PMI',        ticker:'MPMIEZMA Index', fmt:'1f', unit:'',  hz:'C', accent:'#1e40af', ref:50},
+          {label:'EA Services PMI',   ticker:'MPMIEZSA Index', fmt:'1f', unit:'',  hz:'C', accent:'#3b82f6', ref:50},
+          {label:'EA Unemployment',   ticker:'UMRTEMU Index',  fmt:'1f', unit:'%', hz:'T', accent:'#f97316'},
+          {label:'Germany IFO Climate',ticker:'GRIFPBUS Index',fmt:'1f', unit:'',  hz:'C', accent:'#000000'},
+        ],
+        charts:[
+          {title:'EA Composite / Mfg / Services PMI', tickers:['MPMIEZCA Index','MPMIEZMA Index','MPMIEZSA Index'], labels:['Comp','Mfg','Svcs'], colors:['#003399','#f59e0b','#3b82f6'], p:'MONTHLY', y:5, refLine:50},
+          {title:'Germany IFO Business Climate', tickers:['GRIFPBUS Index'], labels:['IFO'], colors:['#374151'], p:'MONTHLY', y:5},
+        ]
+      },
+      {
+        id:'jp_macro', title:'Japan Surveys', cols:4,
+        kpis:[
+          {label:'Japan Mfg PMI',         ticker:'MPMIJPMA Index', fmt:'1f', unit:'',  hz:'C', accent:'#bc002d', ref:50},
+          {label:'Japan Services PMI',    ticker:'MPMIJPSA Index', fmt:'1f', unit:'',  hz:'C', accent:'#ef4444', ref:50},
+          {label:'Japan Tankan (Lg Mfg)', ticker:'JNTSMFG Index',  fmt:'0f', unit:'',  hz:'C', accent:'#7f1d1d'},
+        ],
+        charts:[
+          {title:'Japan Mfg & Services PMI', tickers:['MPMIJPMA Index','MPMIJPSA Index'], labels:['Mfg','Svcs'], colors:['#bc002d','#ef4444'], p:'MONTHLY', y:5, refLine:50},
+          {title:'Japan Tankan Large Mfg',   tickers:['JNTSMFG Index'], labels:['Tankan'], colors:['#7f1d1d'], p:'QUARTERLY', y:5},
+        ]
+      },
+      {
+        id:'em_macro', title:'Asia EM Growth & Inflation', cols:6,
+        kpis:[
+          {label:'EM Real GDP YoY', ticker:'EHGDEMGY Index', fmt:'1f', unit:'%', hz:'C', accent:'#3fb950'},
+          {label:'EM CPI YoY',      ticker:'EHPIEMG Index',  fmt:'2f', unit:'%', hz:'C', accent:'#dc2626'},
+          {label:'EM Composite PMI',ticker:'MPMIEMCA Index', fmt:'1f', unit:'',  hz:'C', accent:'#1e3a5f', ref:50},
+          {label:'Korea Mfg PMI',   ticker:'MPMIKRMA Index', fmt:'1f', unit:'',  hz:'C', accent:'#cd2e3a', ref:50},
+          {label:'Korea GDP QoQ',   ticker:'KOGDPQOQ Index', fmt:'1f', unit:'%', hz:'C', accent:'#16a34a'},
+          {label:'Korea Unemp.',    ticker:'KOEAUERS Index', fmt:'1f', unit:'%', hz:'T', accent:'#f97316'},
+        ],
+        charts:[
+          {title:'EM vs Korea Mfg PMI',  tickers:['MPMIEMCA Index','MPMIKRMA Index'], labels:['EM Comp','Korea Mfg'], colors:['#1e3a5f','#cd2e3a'], p:'MONTHLY', y:5, refLine:50},
+          {title:'EM GDP & CPI YoY (%)', tickers:['EHGDEMGY Index','EHPIEMG Index'], labels:['GDP','CPI'], colors:['#3fb950','#dc2626'], p:'QUARTERLY', y:5},
+        ]
+      },
+      {
+        id:'external', title:'External, Trade & Global Shipping', cols:4,
+        kpis:[
+          {label:'China FX Reserves',  ticker:'CNGFOREX Index', fmt:'0f', unit:'$Bn', hz:'C', accent:'#de2910'},
+          {label:'China Trade Balance',ticker:'CNFRBAL$ Index', fmt:'1f', unit:'$Bn', hz:'T', accent:'#f97316'},
+          {label:'Japan Trade Balance',ticker:'ECOYBJPN Index', fmt:'1f', unit:'¥Bn', hz:'T', accent:'#dc2626'},
+          {label:'Baltic Dry Index',   ticker:'BDIY Index',     fmt:'0f', unit:'',    hz:'T', accent:'#0e7490'},
+        ],
+        charts:[
+          {title:'China FX Reserves ($Bn)',    tickers:['CNGFOREX Index'], labels:['FX Res.'], colors:['#de2910'], p:'MONTHLY', y:5},
+          {title:'Trade Balances ($Bn / ¥Bn)', tickers:['CNFRBAL$ Index','ECOYBJPN Index'], labels:['China','Japan'], colors:['#f97316','#dc2626'], p:'MONTHLY', y:5, refLine:0},
+          {title:'Baltic Dry Index',           tickers:['BDIY Index'], labels:['BDIY'], colors:['#0e7490'], p:'WEEKLY', y:5},
+        ]
+      },
+    ],
+    metrics:[
+      {label:'ISM Manufacturing',    ticker:'NAPMPMI Index',  cat:'US Growth',     hz:'C'},
+      {label:'ISM Services',         ticker:'NAPMNMI Index',  cat:'US Growth',     hz:'C'},
+      {label:'Nonfarm Payrolls',     ticker:'NFP TCH Index',  cat:'US Labour',     hz:'T'},
+      {label:'Unemployment',         ticker:'USURTOT Index',  cat:'US Labour',     hz:'T'},
+      {label:'Initial Jobless Claims',ticker:'INJCJC Index',  cat:'US Labour',     hz:'T'},
+      {label:'JOLTS Job Openings',   ticker:'JOLTTOTL Index', cat:'US Labour',     hz:'T'},
+      {label:'Retail Sales MoM',     ticker:'RSTAMOM Index',  cat:'US Growth',     hz:'T'},
+      {label:'Retail Sales YoY',     ticker:'RSTAYOY Index',  cat:'US Growth',     hz:'T'},
+      {label:'Housing Starts',       ticker:'NHSPSTOT Index', cat:'US Growth',     hz:'T'},
+      {label:'GDP QoQ Ann.',         ticker:'GDP CQOQ Index', cat:'US Growth',     hz:'C'},
+      {label:'CPI YoY',              ticker:'CPI YOY Index',  cat:'US Inflation',  hz:'T'},
+      {label:'CPI MoM',              ticker:'CPI CHNG Index', cat:'US Inflation',  hz:'T'},
+      {label:'Core PCE YoY',         ticker:'PCE CYOY Index', cat:'US Inflation',  hz:'C'},
+      {label:'CPI Quarterly SAAR',   ticker:'CPIQCSAN Index', cat:'US Inflation',  hz:'C'},
+      {label:'Conference Board',     ticker:'CONCCONF Index', cat:'US Sentiment',  hz:'T'},
+      {label:'U-Mich Sentiment',     ticker:'CONSSENT Index', cat:'US Sentiment',  hz:'T'},
+      {label:'Industrial Prod. YoY', ticker:'CHVAIOY Index',  cat:'China Growth',  hz:'T'},
+      {label:'Retail Sales YoY (CN)',ticker:'CNRSCYOY Index', cat:'China Growth',  hz:'T'},
+      {label:'Fixed Asset Inv. YoY', ticker:'CNFAYOY Index',  cat:'China Growth',  hz:'T'},
+      {label:'China CPI YoY',        ticker:'CNCPIYOY Index', cat:'China Inflation', hz:'C'},
+      {label:'China PPI YoY',        ticker:'CHEFTYOY Index', cat:'China Inflation', hz:'C'},
+      {label:'EA Composite PMI',     ticker:'MPMIEZCA Index', cat:'Europe Growth', hz:'C'},
+      {label:'EA Mfg PMI',           ticker:'MPMIEZMA Index', cat:'Europe Growth', hz:'C'},
+      {label:'EA Unemployment',      ticker:'UMRTEMU Index',  cat:'Europe Labour', hz:'T'},
+      {label:'Germany IFO Climate',  ticker:'GRIFPBUS Index', cat:'Europe Growth', hz:'C'},
+      {label:'Japan Tankan (Lg Mfg)',ticker:'JNTSMFG Index',  cat:'Japan',         hz:'C'},
+      {label:'EM Real GDP YoY',      ticker:'EHGDEMGY Index', cat:'EM Growth',     hz:'C'},
+      {label:'EM CPI YoY',           ticker:'EHPIEMG Index',  cat:'EM Inflation',  hz:'C'},
+      {label:'EM Composite PMI',     ticker:'MPMIEMCA Index', cat:'EM Growth',     hz:'C'},
+      {label:'Korea Mfg PMI',        ticker:'MPMIKRMA Index', cat:'EM Growth',     hz:'C'},
+      {label:'Korea GDP QoQ',        ticker:'KOGDPQOQ Index', cat:'EM Growth',     hz:'C'},
+      {label:'Korea Unemp.',         ticker:'KOEAUERS Index', cat:'EM Labour',     hz:'T'},
+      {label:'China FX Reserves',    ticker:'CNGFOREX Index', cat:'External',      hz:'C'},
+      {label:'China Trade Balance',  ticker:'CNFRBAL$ Index', cat:'External',      hz:'T'},
+      {label:'Japan Trade Balance',  ticker:'ECOYBJPN Index', cat:'External',      hz:'T'},
+      {label:'Baltic Dry Index',     ticker:'BDIY Index',     cat:'External',      hz:'T'},
+    ]
+  },
+
+  // ════════════════════════════════════════════════════════════════════
+  // MONEY & RATES tab — sovereign curves, central-bank rates, liquidity
+  // ════════════════════════════════════════════════════════════════════
+  money: {
+    sections: [
+      {
+        id:'us_rates', title:'US Treasury Curve', cols:6,
+        kpis:[
+          {label:'3M T-Bill Yield',ticker:'USGG3M Index',    fmt:'2f', unit:'%',   hz:'T', accent:'#dc2626'},
+          {label:'2Y UST Yield',   ticker:'GT2 Govt',        fmt:'2f', unit:'%',   hz:'T', accent:'#f97316'},
+          {label:'5Y UST Yield',   ticker:'GT5 Govt',        fmt:'2f', unit:'%',   hz:'C', accent:'#16a34a'},
+          {label:'10Y UST Yield',  ticker:'GT10 Govt',       fmt:'2f', unit:'%',   hz:'C', accent:'#2563eb'},
+          {label:'30Y UST Yield',  ticker:'GT30 Govt',       fmt:'2f', unit:'%',   hz:'S', accent:'#1e3a8a'},
+          {label:'2s10s Spread',   ticker:'_2s10s_SPREAD',   fmt:'0f', unit:'bps', hz:'C', accent:'#7c3aed', mult:100},
+        ],
+        charts:[
+          {title:'UST Yield Curve (3M / 2Y / 5Y / 10Y / 30Y)', tickers:['USGG3M Index','GT2 Govt','GT5 Govt','GT10 Govt','GT30 Govt'], labels:['3M','2Y','5Y','10Y','30Y'], colors:['#dc2626','#f97316','#16a34a','#2563eb','#1e3a8a'], p:'WEEKLY', y:5, fullWidth:true},
+        ]
+      },
+      {
+        id:'us_real', title:'US Real Yields & Inflation Expectations', cols:4,
+        kpis:[
+          {label:'10Y Real Yield (TIPS)', ticker:'USGGT10Y Index', fmt:'2f', unit:'%', hz:'C', accent:'#dc2626'},
+          {label:'10Y Breakeven Infl.',   ticker:'USGGBE10 Index', fmt:'2f', unit:'%', hz:'C', accent:'#d29922'},
+          {label:'5Y Breakeven Infl.',    ticker:'USGGBE05 Index', fmt:'2f', unit:'%', hz:'T', accent:'#f97316'},
+          {label:'ACM 10Y Term Premium',  ticker:'ACMTP10 Index',  fmt:'2f', unit:'%', hz:'S', accent:'#7c3aed'},
+        ],
+        charts:[
+          {title:'10Y Real Yield (TIPS, %)',    tickers:['USGGT10Y Index'], labels:['Real'], colors:['#dc2626'], p:'WEEKLY', y:5, refLine:0},
+          {title:'10Y & 5Y Breakeven Inflation', tickers:['USGGBE10 Index','USGGBE05 Index'], labels:['10Y BE','5Y BE'], colors:['#d29922','#f97316'], p:'WEEKLY', y:5, refLine:2},
+          {title:'ACM 10Y Term Premium (%)',     tickers:['ACMTP10 Index'], labels:['Term Prem'], colors:['#7c3aed'], p:'WEEKLY', y:5, refLine:0},
+        ]
+      },
+      {
+        id:'us_funding', title:'US Funding Rates', cols:4,
+        kpis:[
+          {label:'SOFR Overnight Rate',  ticker:'SOFRRATE Index', fmt:'2f', unit:'%', hz:'T', accent:'#1e40af'},
+          {label:'Fed O/N Rev Repo Rate',ticker:'TOMOTCSO Index', fmt:'2f', unit:'%', hz:'T', accent:'#7c3aed'},
+        ],
+        charts:[
+          {title:'SOFR Overnight Rate (%)', tickers:['SOFRRATE Index'], labels:['SOFR'], colors:['#1e40af'], p:'WEEKLY', y:5},
+        ]
+      },
+      {
+        id:'eu_rates', title:'Bund Curve & ECB', cols:5,
+        kpis:[
+          {label:'2Y Bund Yield',     ticker:'GTDEM2Y Govt',   fmt:'2f', unit:'%', hz:'T', accent:'#f97316'},
+          {label:'10Y Bund Yield',    ticker:'GTDEM10Y Govt',  fmt:'2f', unit:'%', hz:'C', accent:'#2563eb'},
+          {label:'30Y Bund Yield',    ticker:'GTDEM30Y Govt',  fmt:'2f', unit:'%', hz:'S', accent:'#1e3a8a'},
+          {label:'ECB Policy Rate',   ticker:'EURR002W Index', fmt:'2f', unit:'%', hz:'C', accent:'#003399'},
+          {label:'EUR 5y5y Infl Swap',ticker:'FWISEU55 Index', fmt:'2f', unit:'%', hz:'C', accent:'#d29922'},
+        ],
+        charts:[
+          {title:'Bund Yield Curve (2/10/30Y)', tickers:['GTDEM2Y Govt','GTDEM10Y Govt','GTDEM30Y Govt'], labels:['2Y','10Y','30Y'], colors:['#f97316','#2563eb','#1e3a8a'], p:'WEEKLY', y:5},
+          {title:'EUR 5y5y Inflation Swap (%)', tickers:['FWISEU55 Index'], labels:['5y5y'], colors:['#d29922'], p:'WEEKLY', y:5, refLine:2},
+        ]
+      },
+      {
+        id:'jp_rates', title:'JGB Curve & USD/JPY', cols:4,
+        kpis:[
+          {label:'2Y JGB Yield',  ticker:'GTJPY2Y Govt',  fmt:'3f', unit:'%', hz:'T', accent:'#f97316'},
+          {label:'10Y JGB Yield', ticker:'GTJPY10Y Govt', fmt:'3f', unit:'%', hz:'C', accent:'#1e3a8a'},
+          {label:'USD/JPY',       ticker:'USDJPY Curncy', fmt:'2f', unit:'',  hz:'T', accent:'#d29922'},
+        ],
+        charts:[
+          {title:'JGB Yields (2Y / 10Y)', tickers:['GTJPY2Y Govt','GTJPY10Y Govt'], labels:['2Y','10Y'], colors:['#f97316','#1e3a8a'], p:'WEEKLY', y:5},
+          {title:'USD/JPY',                tickers:['USDJPY Curncy'], labels:['USD/JPY'], colors:['#d29922'], p:'WEEKLY', y:5},
+        ]
+      },
+      {
+        id:'cn_money', title:'China Policy & Liquidity', cols:5,
+        kpis:[
+          {label:'LPR 1Y',           ticker:'CHLRLPR1 Index', fmt:'2f', unit:'%',   hz:'C', accent:'#dc2626'},
+          {label:'PBoC Balance Sheet',ticker:'CNMMTTL Index', fmt:'0f', unit:'¥Bn', hz:'C', accent:'#de2910'},
+          {label:'China M2',         ticker:'CNMSM2 Index',   fmt:'0f', unit:'¥Bn', hz:'C', accent:'#f97316'},
+          {label:'TSF Flow',         ticker:'CNLNASF Index',  fmt:'0f', unit:'¥Bn', hz:'C', accent:'#16a34a'},
+          {label:'New Yuan Loans',   ticker:'CNLNNNML Index', fmt:'0f', unit:'¥Bn', hz:'C', accent:'#10b981'},
+        ],
+        charts:[
+          {title:'TSF Flow (¥Bn)',           tickers:['CNLNASF Index'],  labels:['TSF'], colors:['#16a34a'], p:'MONTHLY', y:5},
+          {title:'PBoC Balance Sheet (¥Bn)', tickers:['CNMMTTL Index'],  labels:['PBoC BS'], colors:['#de2910'], p:'MONTHLY', y:5},
+          {title:'China 1Y LPR (%)',         tickers:['CHLRLPR1 Index'], labels:['LPR 1Y'], colors:['#dc2626'], p:'MONTHLY', y:5},
+        ]
+      },
+      {
+        id:'us_liq', title:'US Liquidity & Bank Credit', cols:4,
+        kpis:[
+          {label:'US M2 YoY',          ticker:'M2% YOY Index', fmt:'1f', unit:'%',   hz:'C', accent:'#58a6ff'},
+          {label:'US Bank Loans (H.8)',ticker:'BLCITOTL Index', fmt:'0f', unit:'$Bn', hz:'T', accent:'#d29922'},
+        ],
+        charts:[
+          {title:'US M2 Growth YoY (%)',          tickers:['M2% YOY Index'], labels:['M2 YoY'], colors:['#58a6ff'], p:'MONTHLY', y:5, refLine:0},
+          {title:'US Bank Loans & Leases ($Bn)',  tickers:['BLCITOTL Index'], labels:['Bank Loans'], colors:['#d29922'], p:'WEEKLY', y:5},
+        ]
+      },
+      {
+        id:'jp_liq', title:'BoJ Balance Sheet', cols:4,
+        kpis:[
+          {label:'BoJ Balance Sheet', ticker:'BJFXINOP Index', fmt:'0f', unit:'¥Tn', hz:'C', accent:'#bc002d'},
+          {label:'BoJ Current A/C',   ticker:'JNMBCABE Index', fmt:'0f', unit:'¥Tn', hz:'T', accent:'#dc2626'},
+        ],
+        charts:[
+          {title:'BoJ Balance Sheet (¥Tn)', tickers:['BJFXINOP Index'], labels:['BoJ BS'], colors:['#bc002d'], p:'MONTHLY', y:5},
+        ]
+      },
+    ],
+    metrics:[
+      {label:'3M T-Bill Yield',       ticker:'USGG3M Index',     cat:'US Rates',      hz:'T'},
+      {label:'2Y UST Yield',          ticker:'GT2 Govt',         cat:'US Rates',      hz:'T'},
+      {label:'10Y UST Yield',         ticker:'GT10 Govt',        cat:'US Rates',      hz:'C'},
+      {label:'30Y UST Yield',         ticker:'GT30 Govt',        cat:'US Rates',      hz:'S'},
+      {label:'2s10s Spread',          ticker:'_2s10s_SPREAD',    cat:'US Rates',      hz:'C'},
+      {label:'10Y Real Yield (TIPS)', ticker:'USGGT10Y Index',   cat:'US Real',       hz:'C'},
+      {label:'10Y Breakeven Infl.',   ticker:'USGGBE10 Index',   cat:'US Real',       hz:'C'},
+      {label:'5Y Breakeven Infl.',    ticker:'USGGBE05 Index',   cat:'US Real',       hz:'T'},
+      {label:'ACM 10Y Term Premium',  ticker:'ACMTP10 Index',    cat:'US Real',       hz:'S'},
+      {label:'SOFR Overnight Rate',   ticker:'SOFRRATE Index',   cat:'US Funding',    hz:'T'},
+      {label:'Fed O/N Rev Repo Rate', ticker:'TOMOTCSO Index',   cat:'US Funding',    hz:'T'},
+      {label:'US M2 YoY',             ticker:'M2% YOY Index',    cat:'US Liquidity',  hz:'C'},
+      {label:'US Bank Loans (H.8)',   ticker:'BLCITOTL Index',   cat:'US Liquidity',  hz:'T'},
+      {label:'2Y Bund Yield',         ticker:'GTDEM2Y Govt',     cat:'EU Rates',      hz:'T'},
+      {label:'10Y Bund Yield',        ticker:'GTDEM10Y Govt',    cat:'EU Rates',      hz:'C'},
+      {label:'30Y Bund Yield',        ticker:'GTDEM30Y Govt',    cat:'EU Rates',      hz:'S'},
+      {label:'ECB Policy Rate',       ticker:'EURR002W Index',   cat:'EU Policy',     hz:'C'},
+      {label:'EUR 5y5y Infl Swap',    ticker:'FWISEU55 Index',   cat:'EU Inflation',  hz:'C'},
+      {label:'2Y JGB Yield',          ticker:'GTJPY2Y Govt',     cat:'JP Rates',      hz:'T'},
+      {label:'10Y JGB Yield',         ticker:'GTJPY10Y Govt',    cat:'JP Rates',      hz:'C'},
+      {label:'USD/JPY',               ticker:'USDJPY Curncy',    cat:'JP FX',         hz:'T'},
+      {label:'BoJ Balance Sheet',     ticker:'BJFXINOP Index',   cat:'JP Liquidity',  hz:'C'},
+      {label:'BoJ Current A/C',       ticker:'JNMBCABE Index',   cat:'JP Liquidity',  hz:'T'},
+      {label:'China 1Y LPR',          ticker:'CHLRLPR1 Index',   cat:'CN Policy',     hz:'C'},
+      {label:'PBoC Balance Sheet',    ticker:'CNMMTTL Index',    cat:'CN Liquidity',  hz:'C'},
+      {label:'China M2',              ticker:'CNMSM2 Index',     cat:'CN Liquidity',  hz:'C'},
+      {label:'TSF Flow',              ticker:'CNLNASF Index',    cat:'CN Liquidity',  hz:'C'},
+      {label:'New Yuan Loans',        ticker:'CNLNNNML Index',   cat:'CN Liquidity',  hz:'C'},
+    ]
+  },
+
+  // ════════════════════════════════════════════════════════════════════
+  // MARKETS & RISK tab — equity, vol, credit, FX, FX vol, commodities
+  // ════════════════════════════════════════════════════════════════════
+  // ════════════════════════════════════════════════════════════════════
+  // EQUITY tab — sector & factor scatter plots (WoW vs YoY)
+  //   Y axis = 5-day rolling % return (week-over-week)
+  //   X axis = 252-day rolling % return (year-over-year)
+  //   Each section is one scatter chart with all of its tickers as points.
+  // ════════════════════════════════════════════════════════════════════
+  equity: {
+    sections: [
+      {
+        id:'industry', title:'Industry — MSCI World GICS Sectors (11)', scatter:true,
+        tickers:[
+          'MXWO0EN Index','MXWO0MT Index','MXWO0IN Index','MXWO0CD Index',
+          'MXWO0CS Index','MXWO0HC Index','MXWO0FN Index','MXWO0IT Index',
+          'MXWO0TC Index','MXWO0UT Index','MXWO0RL Index',
+        ],
+        labels:[
+          'Energy','Materials','Industrials','Cons Disc',
+          'Cons Stap','Health','Financials','InfoTech',
+          'Comm Svcs','Utilities','Real Estate',
+        ],
+      },
+      {
+        // Where the entitled MSCI factor isn't available on this Terminal,
+        // the entry is either a single replacement ticker (ETF or S&P proxy)
+        // or an ARRAY of underlyings whose returns are averaged at render
+        // time (e.g. Cyclicals = avg(Cons.Disc, Industrials)).
+        id:'world', title:'MSCI World — Factor Indices', scatter:true,
+        tickers:[
+          'MXWOMOM Index',                                                // Momentum
+          'MXWO000V Index',                                                // Value
+          'MXWO000G Index',                                                // Growth
+          'MXWOQU Index',                                                  // Quality
+          'MXWDHDVD Index',                                                // High Div Yld (also covers DY)
+          'SPBUYUP Index',                                                 // Buyback (S&P 500 proxy)
+          ['MXWO0CD Index','MXWO0IN Index'],                               // Cyclicals composite
+          ['MXWO0CS Index','MXWO0HC Index','MXWO0UT Index'],               // Defensive composite
+          'USMV US Equity',                                                // Low Leverage (ETF proxy)
+          'MXWOLC Index',                                                  // Large Cap
+          'MXWOSC Index',                                                  // Small Cap
+          ['MXWOLC Index','MXWOSC Index'],                                 // Size composite (LC+SC)
+        ],
+        labels:[
+          'Momentum','Value','Growth','Quality','High Div Yld','Buyback',
+          'Cyclicals','Defensive','Low Lev','Large Cap','Small Cap','Size',
+        ],
+      },
+      {
+        id:'usa', title:'MSCI USA — Factor Indices', scatter:true,
+        tickers:[
+          'MTUM US Equity',                                                // Momentum
+          'VLUE US Equity',                                                // Value
+          'IVW US Equity',                                                 // Growth
+          'MXUSQU Index',                                                  // Quality (entitled)
+          'SDY US Equity',                                                 // Div Yld
+          'PKW US Equity',                                                 // Buyback
+          ['S5COND Index','S5INDU Index'],                                 // Cyclicals composite
+          ['S5CONS Index','S5HLTH Index','S5UTIL Index'],                  // Defensive composite
+          'USMV US Equity',                                                // Low Lev
+          'MXUSLC Index',                                                  // Large Cap
+          'MXUSSC Index',                                                  // Small Cap
+        ],
+        labels:[
+          'Momentum','Value','Growth','Quality','Div Yld','Buyback',
+          'Cyclicals','Defensive','Low Lev','Large Cap','Small Cap',
+        ],
+      },
+      {
+        id:'europe', title:'MSCI Europe — Factor Indices', scatter:true,
+        tickers:[
+          'CEMR GY Equity',                                                // Momentum (ETF)
+          'MXEU000V Index',                                                // Value
+          'MXEU000G Index',                                                // Growth
+          'MXEU000Q Index',                                                // Quality (kept; may be empty)
+          'MXEUHDY Index',                                                 // High Div Yld (kept; may be empty)
+          ['MXEU0CD Index','MXEU0IN Index'],                               // Cyclicals composite
+          ['MXEU0CS Index','MXEU0HC Index','MXEU0UT Index'],               // Defensive composite
+          'MXEULC Index',                                                  // Large Cap
+          'MXEUSC Index',                                                  // Small Cap
+        ],
+        labels:[
+          'Momentum','Value','Growth','Quality','High Div Yld',
+          'Cyclicals','Defensive','Large Cap','Small Cap',
+        ],
+      },
+      {
+        id:'aspac', title:'MSCI AC Asia Pacific — Factor Indices', scatter:true,
+        tickers:[
+          'AAXJ US Equity',                                                // Momentum (ETF proxy)
+          ['MXJP000V Index','MXEF000V Index'],                             // Value: JP + EM
+          ['MXJP000G Index','MXEF000G Index'],                             // Growth: JP + EM
+          ['M4JPQU Index','M1EFQU Index'],                                 // Quality: JP + EM
+          ['M4JPDY Index','M1APJDY Index'],                                // HDY: JP + AsPac ex-JP
+          'MXAPLC Index',                                                  // Large Cap
+          'MXAPSC Index',                                                  // Small Cap
+          'MXAP Index',                                                    // Broad
+        ],
+        labels:[
+          'Momentum','Value','Growth','Quality','High Div Yld',
+          'Large Cap','Small Cap','Broad',
+        ],
+      },
+      {
+        id:'em', title:'MSCI EM — Factor Indices', scatter:true,
+        tickers:[
+          'EEMV US Equity',                                                // Momentum proxy (Min Vol ETF)
+          'MXEF000V Index',                                                // Value
+          'MXEF000G Index',                                                // Growth
+          'MXEF000Q Index',                                                // Quality (kept; may be empty)
+          'MXEFHDY Index',                                                 // High Div Yld
+          'MXEFLC Index',                                                  // Large Cap
+          'MXEFSC Index',                                                  // Small Cap
+        ],
+        labels:[
+          'Momentum','Value','Growth','Quality','High Div Yld',
+          'Large Cap','Small Cap',
+        ],
+      },
+    ],
+    metrics: []
+  },
+
+  mkts: {
+    sections: [
+      {
+        id:'equity', title:'Equity Indices (DM + EM)', cols:6,
+        kpis:[
+          {label:'S&P 500',        ticker:'SPX Index',     fmt:'0f', unit:'', hz:'T', accent:'#3fb950'},
+          {label:'Nasdaq 100',     ticker:'NDX Index',     fmt:'0f', unit:'', hz:'T', accent:'#2563eb'},
+          {label:'Russell 2000',   ticker:'RTY Index',     fmt:'0f', unit:'', hz:'T', accent:'#0891b2'},
+          {label:'Stoxx 600',      ticker:'SXXP Index',    fmt:'1f', unit:'', hz:'T', accent:'#003399'},
+          {label:'FTSE 100',       ticker:'UKX Index',     fmt:'0f', unit:'', hz:'T', accent:'#012169'},
+          {label:'DAX 40',         ticker:'DAX Index',     fmt:'0f', unit:'', hz:'T', accent:'#000000'},
+          {label:'CAC 40',         ticker:'CAC Index',     fmt:'0f', unit:'', hz:'T', accent:'#0055a4'},
+          {label:'Nikkei 225',     ticker:'NKY Index',     fmt:'0f', unit:'', hz:'T', accent:'#bc002d'},
+          {label:'TOPIX',          ticker:'TPX Index',     fmt:'1f', unit:'', hz:'T', accent:'#d7003a'},
+          {label:'KOSPI',          ticker:'KOSPI Index',   fmt:'1f', unit:'', hz:'T', accent:'#003478'},
+          {label:'Hang Seng',      ticker:'HSI Index',     fmt:'0f', unit:'', hz:'T', accent:'#f97316'},
+          {label:'CSI 300',        ticker:'SHSZ300 Index', fmt:'0f', unit:'', hz:'T', accent:'#de2910'},
+          {label:'Taiwan TAIEX',   ticker:'TWSE Index',    fmt:'0f', unit:'', hz:'T', accent:'#000095'},
+          {label:'NIFTY 50',       ticker:'NIFTY Index',   fmt:'0f', unit:'', hz:'T', accent:'#f77f00'},
+          {label:'Straits Times',  ticker:'STI Index',     fmt:'1f', unit:'', hz:'T', accent:'#ef3340'},
+          {label:'MSCI EM Equity', ticker:'MXEF Index',    fmt:'1f', unit:'', hz:'T', accent:'#7c3aed'},
+        ],
+        charts:[
+          {title:'S&P 500',    tickers:['SPX Index'],     labels:['SPX'],     colors:['#3fb950'], p:'WEEKLY', y:5},
+          {title:'Stoxx 600',  tickers:['SXXP Index'],    labels:['SXXP'],    colors:['#003399'], p:'WEEKLY', y:5},
+          {title:'Nikkei 225', tickers:['NKY Index'],     labels:['NKY'],     colors:['#bc002d'], p:'WEEKLY', y:5},
+          {title:'Hang Seng',  tickers:['HSI Index'],     labels:['HSI'],     colors:['#f97316'], p:'WEEKLY', y:5},
+          {title:'CSI 300',    tickers:['SHSZ300 Index'], labels:['CSI 300'], colors:['#de2910'], p:'WEEKLY', y:5},
+          {title:'MSCI EM',    tickers:['MXEF Index'],    labels:['MXEF'],    colors:['#7c3aed'], p:'WEEKLY', y:5},
+        ]
+      },
+      {
+        id:'vol', title:'Equity Volatility & SKEW', cols:5,
+        kpis:[
+          {label:'1M VIX',     ticker:'VIX Index',   fmt:'2f', unit:'%', hz:'T', accent:'#dc2626'},
+          {label:'3M VIX',     ticker:'VIX3M Index', fmt:'2f', unit:'%', hz:'T', accent:'#f97316'},
+          {label:'6M VIX',     ticker:'VIX6M Index', fmt:'2f', unit:'%', hz:'C', accent:'#2563eb'},
+          {label:'12M VIX',    ticker:'VIX1Y Index', fmt:'2f', unit:'%', hz:'C', accent:'#1e3a8a'},
+          {label:'CBOE SKEW',  ticker:'SKEW Index',  fmt:'1f', unit:'',  hz:'T', accent:'#7c3aed'},
+        ],
+        vixTermStr: true,
+        vixCurve: true,
+        charts:[
+          {title:'VIX 1M / 3M / 6M / 12M', tickers:['VIX Index','VIX3M Index','VIX6M Index','VIX1Y Index'], labels:['1M','3M','6M','12M'], colors:['#dc2626','#f97316','#2563eb','#1e3a8a'], p:'WEEKLY', y:5, refLine:20},
+          {title:'CBOE SKEW',              tickers:['SKEW Index'], labels:['SKEW'], colors:['#7c3aed'], p:'WEEKLY', y:5, refLine:100},
+        ]
+      },
+      {
+        id:'credit', title:'Credit Risk (CDX / iTraxx / OAS)', cols:8,
+        kpis:[
+          {label:'CDX IG 5Y',       ticker:'CDX IG CDSI GEN 5Y Corp',      fmt:'0f', unit:'bps', hz:'T', accent:'#d29922'},
+          {label:'CDX HY 5Y',       ticker:'CDX HY CDSI GEN 5Y SPRD Corp', fmt:'0f', unit:'bps', hz:'T', accent:'#f85149'},
+          {label:'iTraxx EUR IG',   ticker:'ITRX EUR CDSI GEN 5Y Corp',    fmt:'0f', unit:'bps', hz:'T', accent:'#10b981'},
+          {label:'iTraxx Crossover',ticker:'ITRX XOVER CDSI GEN 5Y Corp',  fmt:'0f', unit:'bps', hz:'T', accent:'#dc2626'},
+          {label:'CDX EM 5Y',       ticker:'CDX EM CDSI GEN 5Y SPRD Corp', fmt:'0f', unit:'bps', hz:'T', accent:'#7c3aed'},
+          {label:'AAA Corp OAS',    ticker:'LCA3OAS Index',                fmt:'0f', unit:'bps', hz:'C', accent:'#16a34a', mult:100},
+          {label:'Baa Corp OAS',    ticker:'LCB1OAS Index',                fmt:'0f', unit:'bps', hz:'C', accent:'#f97316', mult:100},
+          {label:'Baa-AAA Spread',  ticker:'_BAA_AAA_SPREAD',              fmt:'0f', unit:'bps', hz:'C', accent:'#dc2626', mult:100},
+        ],
+        charts:[
+          {title:'CDX IG vs HY (bps)',           tickers:['CDX IG CDSI GEN 5Y Corp','CDX HY CDSI GEN 5Y SPRD Corp'], labels:['IG','HY'], colors:['#d29922','#f85149'], p:'WEEKLY', y:5},
+          {title:'iTraxx EUR vs Crossover (bps)',tickers:['ITRX EUR CDSI GEN 5Y Corp','ITRX XOVER CDSI GEN 5Y Corp'], labels:['EUR IG','Crossover'], colors:['#10b981','#dc2626'], p:'WEEKLY', y:5},
+          {title:'US AAA vs Baa Corp OAS (bps)', tickers:['LCA3OAS Index','LCB1OAS Index'], labels:['AAA','Baa'], colors:['#16a34a','#f97316'], p:'WEEKLY', y:5, mult:100, unit:'bps', fmt:'0f'},
+          {title:'All Spreads — CDX HY / IG / EM + Baa OAS (bps)',
+           tickers:['CDX HY CDSI GEN 5Y SPRD Corp','CDX IG CDSI GEN 5Y Corp','CDX EM CDSI GEN 5Y SPRD Corp','LCB1OAS Index'],
+           labels:['CDX HY','CDX IG','CDX EM','Baa OAS'],
+           colors:['#f85149','#d29922','#7c3aed','#f97316'],
+           p:'WEEKLY', y:5,
+           multSeries:[1, 1, 1, 100],
+           unit:'bps', fmt:'0f'},
+        ]
+      },
+      {
+        id:'xasset', title:'Cross-Asset Signal', cols:6,
+        kpis:[],
+        crossCorr: true,
+      },
+      {
+        id:'fx', title:'Global FX', cols:5,
+        kpis:[
+          {label:'DXY',     ticker:'DXY Curncy',    fmt:'2f', unit:'', hz:'C', accent:'#64748b'},
+          {label:'EUR/USD', ticker:'EURUSD Curncy', fmt:'4f', unit:'', hz:'T', accent:'#003399'},
+          {label:'GBP/USD', ticker:'GBPUSD Curncy', fmt:'4f', unit:'', hz:'T', accent:'#012169'},
+          {label:'USD/JPY', ticker:'USDJPY Curncy', fmt:'2f', unit:'', hz:'T', accent:'#d29922'},
+          {label:'USD/CNH', ticker:'USDCNH Curncy', fmt:'4f', unit:'', hz:'T', accent:'#de2910'},
+        ],
+        charts:[
+          {title:'Dollar Index (DXY)', tickers:['DXY Curncy'], labels:['DXY'], colors:['#64748b'], p:'WEEKLY', y:5},
+          {title:'EUR/USD & GBP/USD',  tickers:['EURUSD Curncy','GBPUSD Curncy'], labels:['EUR','GBP'], colors:['#003399','#cf142b'], p:'WEEKLY', y:5},
+        ]
+      },
+      {
+        id:'fxvol', title:'FX Volatility', cols:4,
+        kpis:[
+          {label:'DB CVIX FX Vol',  ticker:'CVIX Index',           fmt:'2f', unit:'%', hz:'T', accent:'#8b5cf6'},
+          {label:'EUR/USD 1M Vol',  ticker:'EURUSDV1M BGN Curncy', fmt:'2f', unit:'%', hz:'T', accent:'#7c3aed'},
+          {label:'USD/JPY 1M Vol',  ticker:'USDJPYV1M BGN Curncy', fmt:'2f', unit:'%', hz:'T', accent:'#d29922'},
+        ],
+        charts:[
+          {title:'CVIX FX Vol Index', tickers:['CVIX Index'], labels:['CVIX'], colors:['#8b5cf6'], p:'WEEKLY', y:5},
+        ]
+      },
+      {
+        id:'cmdty', title:'Commodities', cols:6,
+        kpis:[
+          {label:'WTI Crude',    ticker:'CL1 Comdty', fmt:'2f', unit:'$', hz:'C', accent:'#b45309'},
+          {label:'Brent Crude',  ticker:'CO1 Comdty', fmt:'2f', unit:'$', hz:'C', accent:'#047857'},
+          {label:'Natural Gas',  ticker:'NG1 Comdty', fmt:'2f', unit:'$', hz:'T', accent:'#0e7490'},
+          {label:'Gold',         ticker:'XAU Curncy', fmt:'0f', unit:'$', hz:'C', accent:'#d29922'},
+          {label:'Copper',       ticker:'HG1 Comdty', fmt:'2f', unit:'',  hz:'C', accent:'#78350f'},
+          {label:'Iron Ore (CNY)',ticker:'IOE1 Comdty',fmt:'1f', unit:'', hz:'C', accent:'#7f1d1d'},
+          {label:'Shanghai Gold Premium', ticker:'.SHAUPREM G Index', fmt:'2f', unit:'$', hz:'T', accent:'#dc2626'},
+        ],
+        charts:[
+          {title:'WTI vs Brent ($)',   tickers:['CL1 Comdty','CO1 Comdty'], labels:['WTI','Brent'], colors:['#b45309','#047857'], p:'WEEKLY', y:5},
+          {title:'Natural Gas ($)',    tickers:['NG1 Comdty'], labels:['NatGas'], colors:['#0e7490'], p:'WEEKLY', y:5},
+          {title:'Gold ($/oz)',        tickers:['XAU Curncy'], labels:['Gold'], colors:['#d29922'], p:'WEEKLY', y:5},
+          {title:'Copper',             tickers:['HG1 Comdty'], labels:['Copper'], colors:['#78350f'], p:'WEEKLY', y:5},
+          {title:'Iron Ore (SGX, CNY)',tickers:['IOE1 Comdty'], labels:['Iron Ore'], colors:['#7f1d1d'], p:'WEEKLY', y:5},
+          {title:'Shanghai Gold Premium vs COMEX ($/oz)', tickers:['.SHAUPREM G Index'], labels:['Premium'], colors:['#dc2626'], p:'DAILY', y:5, refLine:0},
+        ]
+      },
+      {
+        id:'val', title:'Valuation & Sentiment', cols:4,
+        kpis:[
+          {label:'Buffett Indicator',  ticker:'MCGDUS Index',    fmt:'1f', unit:'%', hz:'C', accent:'#7c3aed'},
+          {label:'AAII Bullish',       ticker:'AAIIBULL Index',  fmt:'1f', unit:'%', hz:'T', accent:'#16a34a'},
+          {label:'AAII Bearish',       ticker:'AAIIBEAR Index',  fmt:'1f', unit:'%', hz:'T', accent:'#dc2626'},
+        ],
+        charts:[
+          {title:'Buffett Indicator (Mkt Cap / GDP, %)', tickers:['MCGDUS Index'], labels:['MC/GDP'], colors:['#7c3aed'], p:'QUARTERLY', y:10, refLine:100},
+          {title:'AAII Bullish vs Bearish (%)',      tickers:['AAIIBULL Index','AAIIBEAR Index'], labels:['Bullish','Bearish'], colors:['#16a34a','#dc2626'], p:'WEEKLY', y:5},
+        ]
+      },
+    ],
+    metrics:[
+      {label:'S&P 500',         ticker:'SPX Index',                       cat:'Equity', hz:'T'},
+      {label:'Nasdaq 100',      ticker:'NDX Index',                       cat:'Equity', hz:'T'},
+      {label:'Russell 2000',    ticker:'RTY Index',                       cat:'Equity', hz:'T'},
+      {label:'Stoxx 600',       ticker:'SXXP Index',                      cat:'Equity', hz:'T'},
+      {label:'FTSE 100',        ticker:'UKX Index',                       cat:'Equity', hz:'T'},
+      {label:'DAX 40',          ticker:'DAX Index',                       cat:'Equity', hz:'T'},
+      {label:'CAC 40',          ticker:'CAC Index',                       cat:'Equity', hz:'T'},
+      {label:'Nikkei 225',      ticker:'NKY Index',                       cat:'Equity', hz:'T'},
+      {label:'TOPIX',           ticker:'TPX Index',                       cat:'Equity', hz:'T'},
+      {label:'KOSPI',           ticker:'KOSPI Index',                     cat:'Equity', hz:'T'},
+      {label:'Hang Seng',       ticker:'HSI Index',                       cat:'Equity', hz:'T'},
+      {label:'CSI 300',         ticker:'SHSZ300 Index',                   cat:'Equity', hz:'T'},
+      {label:'Taiwan TAIEX',    ticker:'TWSE Index',                      cat:'Equity', hz:'T'},
+      {label:'NIFTY 50',        ticker:'NIFTY Index',                     cat:'Equity', hz:'T'},
+      {label:'Straits Times',   ticker:'STI Index',                       cat:'Equity', hz:'T'},
+      {label:'MSCI EM Equity',  ticker:'MXEF Index',                      cat:'Equity', hz:'T'},
+      {label:'1M VIX',          ticker:'VIX Index',                       cat:'Vol',    hz:'T'},
+      {label:'3M VIX',          ticker:'VIX3M Index',                     cat:'Vol',    hz:'T'},
+      {label:'6M VIX',          ticker:'VIX6M Index',                     cat:'Vol',    hz:'C'},
+      {label:'12M VIX',         ticker:'VIX1Y Index',                     cat:'Vol',    hz:'C'},
+      {label:'CBOE SKEW',       ticker:'SKEW Index',                      cat:'Vol',    hz:'T'},
+      {label:'CDX IG 5Y',       ticker:'CDX IG CDSI GEN 5Y Corp',         cat:'Credit', hz:'T'},
+      {label:'CDX HY 5Y',       ticker:'CDX HY CDSI GEN 5Y SPRD Corp',    cat:'Credit', hz:'T'},
+      {label:'iTraxx EUR IG',   ticker:'ITRX EUR CDSI GEN 5Y Corp',       cat:'Credit', hz:'T'},
+      {label:'iTraxx Crossover',ticker:'ITRX XOVER CDSI GEN 5Y Corp',     cat:'Credit', hz:'T'},
+      {label:'CDX EM 5Y',       ticker:'CDX EM CDSI GEN 5Y SPRD Corp',    cat:'Credit', hz:'T'},
+      {label:'AAA Corp OAS',    ticker:'LCA3OAS Index',                   cat:'Credit', hz:'C'},
+      {label:'Baa Corp OAS',    ticker:'LCB1OAS Index',                   cat:'Credit', hz:'C'},
+      {label:'Baa-AAA Spread',  ticker:'_BAA_AAA_SPREAD',                 cat:'Credit', hz:'C'},
+      {label:'DXY',             ticker:'DXY Curncy',                      cat:'FX',     hz:'C'},
+      {label:'EUR/USD',         ticker:'EURUSD Curncy',                   cat:'FX',     hz:'T'},
+      {label:'GBP/USD',         ticker:'GBPUSD Curncy',                   cat:'FX',     hz:'T'},
+      {label:'USD/JPY',         ticker:'USDJPY Curncy',                   cat:'FX',     hz:'T'},
+      {label:'USD/CNH',         ticker:'USDCNH Curncy',                   cat:'FX',     hz:'T'},
+      {label:'DB CVIX',         ticker:'CVIX Index',                      cat:'FX Vol', hz:'T'},
+      {label:'EUR/USD 1M Vol',  ticker:'EURUSDV1M BGN Curncy',            cat:'FX Vol', hz:'T'},
+      {label:'USD/JPY 1M Vol',  ticker:'USDJPYV1M BGN Curncy',            cat:'FX Vol', hz:'T'},
+      {label:'WTI Crude',       ticker:'CL1 Comdty',                      cat:'Cmdty',  hz:'C'},
+      {label:'Brent Crude',     ticker:'CO1 Comdty',                      cat:'Cmdty',  hz:'C'},
+      {label:'Natural Gas',     ticker:'NG1 Comdty',                      cat:'Cmdty',  hz:'T'},
+      {label:'Gold',            ticker:'XAU Curncy',                      cat:'Cmdty',  hz:'C'},
+      {label:'Copper',          ticker:'HG1 Comdty',                      cat:'Cmdty',  hz:'C'},
+      {label:'Iron Ore (CNY)',  ticker:'IOE1 Comdty',                     cat:'Cmdty',  hz:'C'},
+      {label:'SH Gold Premium', ticker:'.SHAUPREM G Index',               cat:'Cmdty',  hz:'T'},
+    ]
+  },
+};
+
+// ═══════════════════════════════════════════════════════════════════════
+// OVERVIEW TAB CONFIG
+// ═══════════════════════════════════════════════════════════════════════
+// Vanda Positioning — Position tab. Instruments are discovered server-side
+// from the CSV folder; this client config only carries the per-group accent
+// colors used when drawing the line charts. Data comes from /api/vanda.
+const VANDA_GROUP_COLOR = { 'Equities': '#1e40af', 'Commodities': '#b45309', 'Other': '#6e7681' };
+let _vandaYears  = 2;     // active window (years); 0 = all history
+let _vandaLoaded = false;
+const _tabDirty = new Set(['ov','econ','money','mkts','equity']);
+
+// ═══════════════════════════════════════════════════════════════════════
+// TICKER META — derived from CFG so each chart knows its Y-axis unit
+// ═══════════════════════════════════════════════════════════════════════
+const TICKER_META = (function() {
+  const m = {};
+  const add = (k) => { if (k && k.ticker && !m[k.ticker]) m[k.ticker] = {
+    fmt: k.fmt || '2f', unit: k.unit || '', mult: k.mult || 1
+  }; };
+  for (const tab of Object.values(CFG)) {
+    for (const sec of tab.sections || []) (sec.kpis || []).forEach(add);
+  }
+  return m;
+})();
+
+// Format a number for compact Y-axis tick display. Handles unit suffix
+// (%, bps, $, $Bn, ¥Bn, ¥Tn, K) and abbreviates big numbers (k / M).
+function fmtAxis(v, unit, fmt) {
+  if (v === null || v === undefined || isNaN(v)) return '';
+  const abs = Math.abs(v);
+  const d = _digits(fmt);  // 0 / 1 / 2 — never more, even if fmt was '3f' or '4f'
+  let s;
+  if      (unit === '%' || unit === 'bps')      s = v.toFixed(d);
+  else if (abs >= 1e6)                          s = (v/1e6).toFixed(1) + 'M';
+  else if (abs >= 1e4)                          s = (v/1e3).toFixed(0) + 'k';
+  else if (abs >= 1e3)                          s = (v/1e3).toFixed(1) + 'k';
+  else                                          s = v.toFixed(d);
+  if (unit === '%')    return s + '%';
+  if (unit === 'bps')  return s + ' bps';
+  if (unit === '$')    return '$' + s;
+  if (unit === '$Bn')  return '$' + s + ' Bn';
+  if (unit === '¥Bn')  return '¥' + s + ' Bn';
+  if (unit === '¥Tn')  return '¥' + s + ' Tn';
+  if (unit === 'K')    return s + ' K';
+  if (unit)            return s + ' ' + unit;
+  return s;
+}
+
+// Pick the Y-axis unit/fmt for a chart from explicit chart.unit or the
+// first ticker's KPI meta.
+function chartUnit(c) {
+  if (c.unit !== undefined) return { unit: c.unit, fmt: c.fmt || '2f' };
+  const meta = TICKER_META[c.tickers && c.tickers[0]] || {};
+  return { unit: meta.unit || '', fmt: meta.fmt || '2f' };
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════════════
+let gData = { lastRefresh:null, metrics:{} };
+let gTab  = 'ov';
+const cInst   = {};
+
+// ═══════════════════════════════════════════════════════════════════════
+// REGIME CLASSIFICATION
+// ═══════════════════════════════════════════════════════════════════════
+function classifyRegime() {
+  const g   = v => gData.metrics[v]?.value;
+  const ism  = g('NAPMPMI Index'), pce = g('PCE CYOY Index');
+  const cvix = g('CVIX Index'),    hy  = g('CDX HY CDSI GEN 5Y SPRD Corp');
+  const m2   = g('M2% YOY Index'), dxy = g('DXY Curncy');
+  const y10  = g('GT10 Govt'),     cnp = g('CHEFTYOY Index');
+
+  const growthOK  = ism !== null && ism > 50;
+  const inflHot   = pce !== null && pce > 3.0;
+  const stress    = (cvix !== null && cvix > 9) || (hy !== null && hy > 450);
+  const liquidity = m2 !== null  && m2 > 3;
+  const tightDol  = dxy !== null && dxy > 105;
+  const realTight = y10 !== null && y10 > 4.5;
+
+  let name, color, sub;
+
+  // No-data guard: if the growth/inflation inputs aren't loaded yet, stay
+  // neutral rather than falsely landing in a real quadrant.
+  if (ism === null || ism === undefined || pce === null || pce === undefined) {
+    return { name:'Awaiting data', color:'#8b949e',
+             sub:'Refresh to load Bloomberg data', qualifiers:[] };
+  }
+
+  // ── 2×2 macro-regime quadrant ──────────────────────────────────────────
+  // Growth axis:    Boom = ISM > 50          · Bust = ISM ≤ 50
+  // Inflation axis: Inflationary = core PCE > 3% · Deflationary = ≤ 3%
+  // Banner background = color + '20' (light tint); label/border use color.
+  if (growthOK && inflHot) {
+    name='Inflationary Boom'; color='#2563eb';   // light blue
+    sub='Growth expanding · Inflation above target · Watch policy response';
+  } else if (growthOK && !inflHot) {
+    name='Deflationary Boom'; color='#16a34a';   // light green
+    sub='Growth expanding · Inflation cooling · Goldilocks backdrop';
+  } else if (!growthOK && !inflHot) {
+    name='Deflationary Bust'; color='#d29922';   // light yellow
+    sub='Growth contracting · Inflation falling · Policy easing expected';
+  } else {  // !growthOK && inflHot
+    name='Inflationary Bust'; color='#dc2626';   // light red
+    sub='Growth contracting · Inflation sticky · Stagflationary — most adverse';
+  }
+
+  // Additional context
+  const qualifiers = [];
+  if (tightDol)  qualifiers.push('Dollar tight');
+  if (realTight) qualifiers.push('Real rates restrictive');
+  if (liquidity) qualifiers.push('Liquidity expanding');
+  if (stress)    qualifiers.push('Financial conditions stressed');
+  if (!stress && !tightDol) qualifiers.push('Conditions supportive');
+
+  return { name, color, sub, qualifiers };
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// FORMATTING
+// ═══════════════════════════════════════════════════════════════════════
+// Decimals are capped at 2 site-wide. '3f'/'4f' in legacy configs are
+// downgraded to 2 silently so we never display "1.4012" or "6.7746".
+function _digits(fmt) {
+  return fmt === '0f' ? 0 : fmt === '1f' ? 1 : 2;
+}
+
+// Split a unit string into currency prefix ($/€/¥) + magnitude suffix (Bn/Tn/K/...).
+// '$Bn'  -> {prefix:'$',  suffix:'Bn'}
+// '¥Tn'  -> {prefix:'¥',  suffix:'Tn'}
+// '$'    -> {prefix:'$',  suffix:''}
+// '%'    -> {prefix:'',   suffix:'%'}
+// 'bps'  -> {prefix:'',   suffix:'bps'}
+function _splitUnit(unit) {
+  if (!unit) return {prefix:'', suffix:''};
+  const m = unit.match(/^([$€¥])(.*)$/);
+  return m ? {prefix:m[1], suffix:m[2]} : {prefix:'', suffix:unit};
+}
+
+function fv(v, fmt, unit, mult) {
+  if (v === null || v === undefined || isNaN(v)) return '—';
+  const n = v * (mult || 1);
+  const d = _digits(fmt);
+  const s = n.toLocaleString('en-US', {minimumFractionDigits:d, maximumFractionDigits:d});
+  const {prefix, suffix} = _splitUnit(unit);
+  // Put the minus sign before any currency prefix so we get "-$0.33"
+  // instead of the wrong-looking "$-0.33".
+  let body;
+  if (prefix && s.startsWith('-')) body = '-' + prefix + s.slice(1);
+  else                              body = prefix + s;
+  // '%' hugs the number; everything else (Bn, Tn, K, bps) takes a space.
+  const tail = suffix === '%' ? '%'
+             : suffix         ? ' ' + suffix
+             : '';
+  return body + tail;
+}
+
+// Format the change line under a KPI value.
+//   - For non-percentage units, append the % change in parens:
+//       "▼ 4.65 (0.06%)"     SPX moved down 0.06% of its level
+//       "▼ $1.20 (1.55%)"    WTI moved down 1.55% in dollar terms
+//   - For values that are already a percentage / spread, skip the parens:
+//       "▼ 0.10"             CPI YoY dropped 0.10 percentage points
+//       "▼ 5 bps"            CDX HY tightened 5 bps
+function fmtKpiChg(val, chg, fmt, unit, mult) {
+  if (chg === null || chg === undefined || isNaN(chg)) return '';
+  const m = mult || 1;
+  // Zero change is neutral — no arrow (matches the 'nc' class on the element).
+  const arrow = chg > 0 ? '▲ +' : chg < 0 ? '▼ ' : '';
+  const abs = fv(Math.abs(chg), fmt, unit || '', m);
+  const suffix = (unit || '').replace(/^[$€¥]/, '');
+  if (suffix === '%' || suffix === 'bps') return arrow + abs;
+  const realVal = val * m;
+  if (realVal && Math.abs(realVal) > 1e-9) {
+    const pct = (chg * m) / realVal * 100;
+    // Suppress the relative annotation when the level is small enough that
+    // the % move is misleadingly large (e.g. value=-0.33 -> chg of 0.64
+    // would read 193%). Anything > 50% is more noise than signal.
+    if (Math.abs(pct) <= 50) {
+      // Signed pct so direction is explicit: "(+1.01%)" / "(-1.01%)"
+      const pctStr = (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%';
+      return arrow + abs + ' (' + pctStr + ')';
+    }
+  }
+  return arrow + abs;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// RENDER FUNCTIONS
+// ═══════════════════════════════════════════════════════════════════════
+function renderSignalStrip(tabId, sigs) {
+  const el = document.getElementById(`sigs-${tabId}`);
+  if (!el) return;
+  el.innerHTML = sigs.map(s => {
+    const sig = getSignal(s.ticker);
+    const m   = gData.metrics[s.ticker] || {};
+    const val = fv(m.value, SIG[s.ticker]?.fmt || '1f', SIG[s.ticker]?.unit || '');
+    return `<div class="sig-card">
+      <div class="sig-dot sig-${sig}"></div>
+      <div><div class="sig-lbl">${s.label}</div><div class="sig-val">${val}</div></div>
+    </div>`;
+  }).join('');
+}
+
+// KPI click registry — avoids HTML-attribute escaping issues
+const _kpiReg = {};
+let   _kpiSeq = 0;
+
+// renderKPIs now takes (elId, kpis) where elId is the full element id
+function renderKPIs(elId, kpis) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  el.innerHTML = kpis.map(k => {
+    const m   = gData.metrics[k.ticker] || {};
+    const val = m.value;
+    const chg = m.chgAbs;
+    const ref = k.ref !== undefined;
+    // The tag is a tiny PMI-style threshold flag. Spell out the rule in a
+    // title-tooltip so a first-time viewer doesn't have to guess what "Exp"
+    // means; the visible text is full-word ("Expanding"/"Contracting") and
+    // the tooltip carries the explicit ">50 = expansion" rule.
+    const refTag  = ref
+      ? `<span class="ref-tag ${val>k.ref?'ref-up':'ref-dn'}"
+              title="Above ${k.ref} = expansion · below ${k.ref} = contraction">${val>k.ref?'▲ Expanding':'▼ Contracting'}</span>`
+      : '';
+    const idx = _kpiSeq++;
+    _kpiReg[idx] = k;
+    return `<div class="kpi clickable" onclick="openKpiChart(${idx})">
+      <div class="kpi-accent" style="background:${k.accent}"></div>
+      <div class="kpi-lbl">${k.label}</div>
+      <div class="kpi-val">${fv(val, k.fmt, k.unit, k.mult)}${refTag}</div>
+      <div class="kpi-chg ${chg>0?'up':chg<0?'dn':'nc'}">${fmtKpiChg(val, chg, k.fmt, k.unit, k.mult)}</div>
+      <div class="kpi-note">${m.lastUpdate||''}</div>
+    </div>`;
+  }).join('');
+}
+
+function openKpiChart(idx) {
+  const k = _kpiReg[idx];
+  if (!k) return;
+  openChart(k.ticker, k.label, k.fmt||'2f', k.unit||'', k.mult||1, k.accent||'#58a6ff', k.ref);
+}
+
+function renderTable(tabId, metrics) {
+  const el = document.getElementById(`tbd-${tabId}`);
+  if (!el) return;
+  el.innerHTML = metrics.map(m => {
+    const d  = gData.metrics[m.ticker] || {};
+    const val = d.value;
+    const chg = d.chgAbs;
+    // Pull the same fmt/unit/mult the KPI card uses, so "13,856.28" becomes
+    // "$13,856 Bn" and "6.40" becomes "6.40%" in the indicator table too.
+    const meta = TICKER_META[m.ticker] || {fmt:'2f', unit:'', mult:1};
+    const fmtP = (val !== null && val !== undefined)
+                 ? fv(val, meta.fmt, meta.unit, meta.mult)
+                 : '—';
+    const chgS = (chg !== null && chg !== undefined && !isNaN(chg))
+                 ? (chg >= 0 ? '+' : '-') + fv(Math.abs(chg), meta.fmt, meta.unit, meta.mult)
+                 : '—';
+    const cls  = chg > 0 ? 'up' : chg < 0 ? 'dn' : 'nc';
+    return `<tr>
+      <td>${m.label}</td>
+      <td class="dim">${m.cat||''}</td>
+      <td class="r">${fmtP}</td>
+      <td class="r ${cls}">${chgS}</td>
+      <td class="r dim">${d.lastUpdate||'—'}</td>
+      <td class="dim" style="font-size:13px">${m.ticker}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// SECTIONS RENDERING
+// ═══════════════════════════════════════════════════════════════════════
+function renderLiqModel(tabId) {
+  const el = document.getElementById('liq-model-' + tabId);
+  if (!el) return;
+  const fed = gData.metrics['WALCL Index']?.value;
+  const tga = gData.metrics['WDTGAL Index']?.value;
+  const rrp = gData.metrics['RPONTSYD Index']?.value;
+  const net = (fed && tga && rrp) ? fed - tga - rrp : null;
+  const netCol = net === null ? 'var(--muted)' : net > 5500 ? '#3fb950' : net > 4500 ? '#d29922' : '#f85149';
+  el.innerHTML = [
+    {label:'Fed Balance Sheet', val:fed,             unit:'$Bn', col:'#d29922'},
+    {label:'minus: TGA',        val:tga?-tga:null,  unit:'$Bn', col:'#f85149'},
+    {label:'minus: Rev. Repo',  val:rrp?-rrp:null,  unit:'$Bn', col:'#f85149'},
+    {label:'= Net USD Liquidity',val:net,            unit:'$Bn', col:netCol, bold:true},
+  ].map(c => `<div style="background:var(--card);border:1px solid ${c.bold?c.col+'40':'var(--border)'};border-radius:var(--r);padding:10px 14px">
+    <div style="font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--dim);margin-bottom:3px">${c.label}</div>
+    <div style="font-size:${c.bold?'22':'18'}px;font-weight:${c.bold?'900':'700'};color:${c.col};font-variant-numeric:tabular-nums">
+      ${c.val !== null && c.val !== undefined ? c.val.toLocaleString('en-US',{maximumFractionDigits:0}) + ' ' + c.unit : '—'}
+    </div>
+  </div>`).join('');
+}
+
+function renderSections(tabId, sections) {
+  const cont = document.getElementById('sections-' + tabId);
+  if (!cont) return;
+  let html = '';
+  sections.forEach((sec, i) => {
+    if (i > 0) html += '<div class="divider"></div>';
+    html += `<div class="sec-hdr"><div class="sec-title">${sec.title}</div></div>
+             <div class="kpi-grid g${sec.cols||6}" id="kpi-${tabId}-${sec.id}"></div>`;
+    if (sec.liqModel) html += `<div id="liq-model-${tabId}" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px"></div>`;
+    if (sec.vixTermStr) html += `<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:12px 16px;margin-top:8px;margin-bottom:16px"><div style="font-size:13px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);margin-bottom:10px">VIX Term Structure (spot snapshot)</div><div id="vix-termstr" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px"></div></div>`;
+    if (sec.vixCurve) html += `<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:12px 16px;margin-top:8px;margin-bottom:16px"><div style="font-size:13px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);margin-bottom:10px">VIX Term Curve — Today vs 1 Week Ago vs 1 Month Ago</div><div style="position:relative;height:240px"><div id="vix-curve-load" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--dim);font-size:13px">Loading…</div><canvas id="vix-curve-canvas" style="display:none"></canvas></div></div>`;
+    if (sec.crossCorr) html += `<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:12px 16px;margin-top:8px;margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px">
+        <div style="font-size:13px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--muted)">SPX vs Baa-AAA Credit Spread — Cross-Asset Signal</div>
+        <div id="cc-corr" style="font-size:14px;color:var(--dim)">Loading…</div>
+      </div>
+      <div style="position:relative;height:240px"><div id="cc-load" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--dim);font-size:13px">Loading…</div><canvas id="cc-canvas" style="display:none"></canvas></div>
+    </div>`;
+    if (sec.scatter) html += `<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:12px 16px;margin-top:8px;margin-bottom:16px;position:relative;height:520px">
+      <div id="scat-load-${tabId}-${sec.id}" style="position:absolute;inset:50% 0 0 0;text-align:center;color:var(--dim);font-size:13px">Loading sector / factor returns…</div>
+      <canvas id="scat-cv-${tabId}-${sec.id}" style="display:none"></canvas>
+    </div>`;
+    if (sec.charts && sec.charts.length) html += `<div class="chart-grid cg3" id="charts-${tabId}-${sec.id}"></div>`;
+  });
+  cont.innerHTML = html;
+  sections.forEach(sec => {
+    renderKPIs('kpi-' + tabId + '-' + sec.id, sec.kpis || []);
+    if (sec.liqModel) renderLiqModel(tabId);
+    if (sec.vixTermStr) renderVixTermStructure();
+    if (sec.vixCurve) renderVixCurve();
+    if (sec.crossCorr) renderCrossAssetCorr();
+    if (sec.scatter) renderScatter(tabId, sec);
+    if (sec.charts && sec.charts.length) renderCharts('charts-' + tabId + '-' + sec.id, sec.charts);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// SCATTER — Y-axis = 5-day rolling return (WoW), X-axis = 252-day rolling
+// return (YoY). One point per ticker in the section, labeled at the dot.
+// Used for the Equity tab to show sector / factor short-term vs long-term
+// momentum positioning in one view.
+// ═══════════════════════════════════════════════════════════════════════
+
+// Global concurrency limiter for scatter fetches. The 6 Equity scatter
+// charts together fan out to ~60 unique tickers; firing them all at once
+// makes ngrok's free tier return 502s. Cap at 4 in-flight per page load.
+const _scatterQueue = (() => {
+  let active = 0;
+  const waiting = [];
+  const next = () => {
+    if (active >= 4 || !waiting.length) return;
+    active++;
+    const { task, resolve, reject } = waiting.shift();
+    task().then(v => { active--; resolve(v); next(); },
+                e => { active--; reject(e);  next(); });
+  };
+  return (task) => new Promise((resolve, reject) => {
+    waiting.push({ task, resolve, reject });
+    next();
+  });
+})();
+
+async function renderScatter(tabId, sec) {
+  const loadEl = document.getElementById(`scat-load-${tabId}-${sec.id}`);
+  const cvEl   = document.getElementById(`scat-cv-${tabId}-${sec.id}`);
+  if (!loadEl || !cvEl) return;
+  try {
+    // Each entry in sec.tickers is either a string (one ticker) or an array
+    // of strings (composite — average returns of all underlyings). Flatten
+    // to fetch each underlying exactly once.
+    const entries = sec.tickers.map(t => Array.isArray(t) ? t : [t]);
+    const flat = Array.from(new Set(entries.flat()));   // unique tickers
+    // ngrok's free tier 502s when too many fetches hit the tunnel at once.
+    // Retry up to 3 times with backoff for transient non-JSON responses, so
+    // a 502 doesn't silently drop the factor from the scatter.
+    async function fetchOne(t, attempt = 0) {
+      try {
+        const r = await fetch(`/api/series/${encodeURIComponent(t)}?field=PX_LAST&years=2&periodicity=DAILY`);
+        const ct = r.headers.get('content-type') || '';
+        if (!ct.includes('json')) {
+          if (attempt < 3 && (r.status === 502 || r.status === 503 || r.status === 504)) {
+            await new Promise(res => setTimeout(res, 400 * (attempt + 1)));
+            return fetchOne(t, attempt + 1);
+          }
+          return [];
+        }
+        const d = await r.json();
+        if (!d || !Array.isArray(d.points)) return [];
+        return d.points.map(p => p.v).filter(v => v != null && !isNaN(v));
+      } catch (e) {
+        if (attempt < 3) {
+          await new Promise(res => setTimeout(res, 400 * (attempt + 1)));
+          return fetchOne(t, attempt + 1);
+        }
+        console.warn('fetchOne failed for', t, e.message);
+        return [];
+      }
+    }
+    // Throttle to 4 in-flight requests across the global queue (shared by
+    // all 6 scatter charts) so ngrok's tunnel doesn't 502 under the burst.
+    const arrs = await Promise.all(flat.map(t => _scatterQueue(() => fetchOne(t))));
+    const seriesMap = Object.fromEntries(flat.map((t, i) => [t, arrs[i]]));
+
+    function retsFor(arr) {
+      if (arr.length < 260) return null;
+      const last = arr[arr.length - 1];
+      const wAgo = arr[arr.length - 6];
+      const yAgo = arr[arr.length - 253];
+      if (!last || !wAgo || !yAgo) return null;
+      return {
+        wow: (last / wAgo - 1) * 100,
+        yoy: (last / yAgo - 1) * 100,
+      };
+    }
+
+    const points = [];
+    entries.forEach((tArr, i) => {
+      // Compute returns for each underlying that has enough history.
+      const rets = tArr.map(t => retsFor(seriesMap[t] || [])).filter(Boolean);
+      if (!rets.length) return;
+      // Equal-weight average for composites; single value for non-composites.
+      const wow = rets.reduce((a, r) => a + r.wow, 0) / rets.length;
+      const yoy = rets.reduce((a, r) => a + r.yoy, 0) / rets.length;
+      const display = tArr.length === 1 ? tArr[0] : tArr.join(' + ');
+      points.push({ x: yoy, y: wow, label: sec.labels[i] || display, ticker: display });
+    });
+    if (!points.length) {
+      loadEl.textContent = 'No data for this section yet — hit Refresh to pull.';
+      loadEl.style.color = '#cf222e';
+      loadEl.style.inset = '50% 0 0 0';
+      return;
+    }
+    loadEl.style.display = 'none';
+    cvEl.style.display   = 'block';
+
+    // Annotation plugin: zero lines splitting the four quadrants.
+    // Pad the visible window so points near the extremes don't sit on the
+    // frame edge (e.g. Defensive at the top getting clipped by the border).
+    // Use additive padding based on the data span — 12% of the range on each
+    // side — so single-quadrant data still gets breathing room above 0.
+    const xs = points.map(p => p.x), ys = points.map(p => p.y);
+    const rawXmin = Math.min(0, ...xs);
+    const rawXmax = Math.max(0, ...xs);
+    const rawYmin = Math.min(0, ...ys);
+    const rawYmax = Math.max(0, ...ys);
+    const xPad = Math.max((rawXmax - rawXmin) * 0.12, 1);
+    const yPad = Math.max((rawYmax - rawYmin) * 0.12, 0.5);
+    const xMin = rawXmin - xPad;
+    const xMax = rawXmax + xPad;
+    const yMin = rawYmin - yPad;
+    const yMax = rawYmax + yPad;
+
+    // Color points by quadrant for instant recognition.
+    const colorFor = (p) => {
+      if (p.x >= 0 && p.y >= 0) return '#1a7f37';  // green   — up/up, strong trend
+      if (p.x >= 0 && p.y <  0) return '#e36209';  // orange  — up YoY, down WoW (correction)
+      if (p.x <  0 && p.y >= 0) return '#eac54f';  // yellow  — down YoY, up WoW (bottoming)
+      return '#cf222e';                              // red     — down/down, weak
+    };
+
+    new Chart(cvEl.getContext('2d'), {
+      type: 'scatter',
+      data: {
+        datasets: [{
+          label: sec.title,
+          data: points,
+          backgroundColor: points.map(colorFor),
+          borderColor: points.map(colorFor),
+          pointRadius: 6,
+          pointHoverRadius: 9,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor:'#1c2128', borderColor:'#30363d', borderWidth:1,
+            titleColor:'#e6edf3', bodyColor:'#8b949e',
+            callbacks: {
+              title: c => points[c[0].dataIndex].label,
+              label: c => {
+                const p = points[c.dataIndex];
+                return [
+                  ` Ticker: ${p.ticker}`,
+                  ` YoY (252d): ${p.x.toFixed(2)}%`,
+                  ` WoW (5d):   ${p.y.toFixed(2)}%`,
+                ];
+              }
+            }
+          },
+          annotation: {
+            annotations: {
+              vLine: { type:'line', xMin:0, xMax:0,
+                       borderColor:'#9aa4af', borderWidth:1, borderDash:[3,3] },
+              hLine: { type:'line', yMin:0, yMax:0,
+                       borderColor:'#9aa4af', borderWidth:1, borderDash:[3,3] },
+              // Point labels via datalabels — fallback: use afterDatasetDraw.
+            }
+          },
+        },
+        scales: {
+          x: {
+            min: xMin, max: xMax,
+            title: { display:true, text:'YoY Return (%)', color:DARK_CHART.color, font:{size:13} },
+            grid: { color:DARK_CHART.grid }, ticks: { color:DARK_CHART.tick, font:{size:12},
+              callback: v => v.toFixed(0) + '%' }
+          },
+          y: {
+            min: yMin, max: yMax,
+            title: { display:true, text:'WoW Return (%)', color:DARK_CHART.color, font:{size:13} },
+            grid: { color:DARK_CHART.grid }, ticks: { color:DARK_CHART.tick, font:{size:12},
+              callback: v => v.toFixed(1) + '%' }
+          },
+        },
+        // Draw the ticker label next to each point so the chart is readable
+        // without hovering. Uses a custom afterDatasetDraw hook.
+        animation: { onComplete: function() { drawScatterLabels(this, points); } }
+      },
+      plugins: [{
+        id: 'scatterLabels',
+        afterDatasetDraw: function(chart) { drawScatterLabels(chart, points); }
+      }]
+    });
+  } catch (e) {
+    loadEl.textContent = `Error: ${e.message}`;
+    loadEl.style.color = '#cf222e';
+  }
+}
+
+function drawScatterLabels(chart, points) {
+  const ctx = chart.ctx;
+  const ds  = chart.getDatasetMeta(0);
+  if (!ds || !ds.data) return;
+  ctx.save();
+  ctx.font = '10px Segoe UI, system-ui, sans-serif';
+  ctx.fillStyle = '#1f2328';
+  ctx.textBaseline = 'middle';
+  ds.data.forEach((el, i) => {
+    const p = points[i];
+    if (!p) return;
+    ctx.fillText('  ' + p.label, el.x + 7, el.y);
+  });
+  ctx.restore();
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// CHART RENDERING
+// ═══════════════════════════════════════════════════════════════════════
+const DARK_CHART = {
+  color: '#000',
+  grid:  '#eaeef2',
+  tick:  '#000',
+  axis:  '#000',  // x/y axis line itself
+};
+// Global Chart.js default — render the actual axis lines (the border drawn
+// at the bottom of x and the left of y) in black so every chart inherits it
+// without having to thread `border:{color}` through every scales block.
+// Also hide the interior grid lines globally — only the axis borders remain.
+if (window.Chart && Chart.defaults && Chart.defaults.scale) {
+  Chart.defaults.scale.border = Chart.defaults.scale.border || {};
+  Chart.defaults.scale.border.color = DARK_CHART.axis;
+  Chart.defaults.scale.border.width = 1;
+  Chart.defaults.scale.grid = Chart.defaults.scale.grid || {};
+  Chart.defaults.scale.grid.display = false;
+  Chart.defaults.scale.grid.drawOnChartArea = false;
+}
+
+// Chart config registry for period-reload support
+const _chartCfg = {};
+
+async function renderSingleChart(containerId, i, c, years) {
+  const key   = `${containerId}-${i}`;
+  _chartCfg[key] = c;
+  const ldEl  = document.getElementById(`cl-${containerId}-${i}`);
+  const cvEl  = document.getElementById(`cv-${containerId}-${i}`);
+  if (ldEl) { ldEl.textContent = 'Fetching from Bloomberg…'; ldEl.style.display='flex'; ldEl.style.color=''; }
+  if (cvEl) cvEl.style.display = 'none';
+  const yr = (years !== undefined && years !== null) ? years : (c.y || 5);
+  try {
+    const seriesArr = await Promise.all(
+      c.tickers.map(t =>
+        fetch(`/api/series/${encodeURIComponent(t)}?field=PX_LAST&years=${yr}&periodicity=${c.p||'MONTHLY'}`)
+          .then(r => r.json())
+      )
+    );
+    const hasData = seriesArr.some(s => s.points && s.points.length > 0);
+    if (!hasData) {
+      if (ldEl) { ldEl.textContent = 'No Bloomberg data — click Refresh'; ldEl.style.color='#f85149'; }
+      return;
+    }
+    if (ldEl) ldEl.style.display = 'none';
+    if (cvEl) cvEl.style.display = 'block';
+    const defaultMult = c.mult || 1;
+    const datasets = seriesArr.map((s, si) => {
+      // Per-series multiplier via c.multSeries[si], or fall back to chart-wide c.mult.
+      // Lets us put CDX (already bps) and OAS (decimal % -> bps) on one chart.
+      const mult = (c.multSeries && c.multSeries[si] !== undefined)
+                   ? c.multSeries[si] : defaultMult;
+      const pts = (s.points||[]).map(p => ({ x: p.t*1000, y: p.v * mult }));
+      return {
+        label: c.labels[si], data: pts,
+        borderColor: c.colors[si], backgroundColor: c.colors[si]+'18',
+        borderWidth: 1.8, pointRadius: 0, pointHoverRadius: 4,
+        fill: c.tickers.length === 1, tension: 0.3,
+        yAxisID: c.tickers.length > 1 && si > 0 && c.dualAxis ? 'y1' : 'y',
+      };
+    });
+    const annotations = {};
+    if (c.refLine !== undefined) {
+      annotations.refLine = {
+        type:'line', yMin:c.refLine, yMax:c.refLine,
+        borderColor:'#444d56', borderWidth:1, borderDash:[4,3],
+        label:{ content: c.refLine===0?'0': c.refLine===50?'Neutral 50':`${c.refLine}%`,
+                display:true, position:'end', backgroundColor:'transparent',
+                color:'#6e7681', font:{size:11} }
+      };
+    }
+    if (cvEl) {
+      const ctx = cvEl.getContext('2d');
+      if (cInst[key]) cInst[key].destroy();
+      const cu = chartUnit(c);
+      cInst[key] = new Chart(ctx, {
+        type: 'line', data: { datasets },
+        options: {
+          responsive:true, maintainAspectRatio:false,
+          interaction:{ mode:'index', intersect:false },
+          plugins: {
+            legend: { display: c.tickers.length > 1,
+              labels: { boxWidth:10, font:{size:11}, color:DARK_CHART.color, padding:8 } },
+            tooltip: {
+              backgroundColor:'#1c2128', borderColor:'#30363d', borderWidth:1,
+              titleColor:'#e6edf3', bodyColor:'#8b949e',
+              callbacks: {
+                title: ctx => new Date(ctx[0].parsed.x).toLocaleDateString('en-GB',{month:'short',year:'numeric'}),
+                label: ctx => ` ${ctx.dataset.label}: ${fmtAxis(ctx.parsed.y, cu.unit, cu.fmt)}`
+              }
+            },
+            zoom: { zoom:{wheel:{enabled:true},pinch:{enabled:true},mode:'x'}, pan:{enabled:true,mode:'x'} },
+            annotation: { annotations }
+          },
+          scales: {
+            x: { type:'time',
+                 time:{ unit: c.p==='QUARTERLY'?'quarter': c.p==='WEEKLY'?'week':'month' },
+                 // Clamp the visible window to the actual data range across all
+                 // series so the axis starts where data is valid and ends at
+                 // the latest point — no empty padding on the left or right.
+                 min: Math.min(...datasets.flatMap(d => d.data.map(p=>p.x))),
+                 max: Math.max(...datasets.flatMap(d => d.data.map(p=>p.x))),
+                 bounds: 'data', offset: false,
+                 grid:{ color:DARK_CHART.grid }, ticks:{ color:DARK_CHART.tick, font:{size:11}, maxTicksLimit:8 },
+                 border:{ color:DARK_CHART.grid } },
+            y: { grid:{ color:DARK_CHART.grid },
+                 ticks:{ color:DARK_CHART.tick, font:{size:11},
+                         callback: v => fmtAxis(v, cu.unit, cu.fmt) },
+                 border:{ color:DARK_CHART.grid } }
+          }
+        }
+      });
+    }
+  } catch(e) {
+    if (ldEl) { ldEl.textContent = `Error: ${e.message}`; ldEl.style.color='#f85149'; }
+  }
+}
+
+async function reloadChart(containerId, i, years, btnEl) {
+  const cardEl = document.getElementById(`chart-card-${containerId}-${i}`);
+  if (cardEl) cardEl.querySelectorAll('.cperiod-btn').forEach(b => b.classList.remove('active'));
+  if (btnEl) btnEl.classList.add('active');
+  const key = `${containerId}-${i}`;
+  const c = _chartCfg[key];
+  if (!c) return;
+  await renderSingleChart(containerId, i, c, years);
+}
+
+async function renderCharts(containerId, charts) {
+  // No cLoaded short-circuit: renderSections() rebuilds (empties) this grid on
+  // every tab switch, so an early return would leave it permanently blank on
+  // revisit. The in-page series memo keeps re-renders cheap.
+  const cont = document.getElementById(containerId);
+  if (!cont) return;
+  charts.forEach((c, i) => { _chartCfg[`${containerId}-${i}`] = c; });
+  cont.innerHTML = charts.map((c, i) => {
+    const defaultY = c.y || 5;
+    const yOpts = [1, 2, 5, 10];
+    const btns = yOpts.map(y =>
+      `<button class="cperiod-btn${y===defaultY?' active':''}" onclick="reloadChart('${containerId}',${i},${y},this)">${y}Y</button>`
+    ).join('');
+    const fullWidthStyle = c.fullWidth ? ' style="grid-column:1 / -1"' : '';
+    return `<div class="chart-card" id="chart-card-${containerId}-${i}"${fullWidthStyle}>
+      <div class="chart-hdr">
+        <div class="chart-title">${c.title}</div>
+        <div class="chart-period-bar">${btns}</div>
+      </div>
+      <div class="chart-wrap">
+        <div class="chart-load" id="cl-${containerId}-${i}">Fetching from Bloomberg…</div>
+        <canvas id="cv-${containerId}-${i}" style="display:none"></canvas>
+      </div>
+    </div>`;
+  }).join('');
+  // Fire every chart in this section concurrently — they're independent.
+  // The browser-level series cache (below) means the second tab visit hits
+  // memory, not the network.
+  await Promise.all(charts.map((c, i) =>
+    renderSingleChart(containerId, i, c, c.y || 5)
+  ));
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// GOLD-TO-S&P 500 DIVIDEND RATIO (Gavekal) — /api/divgold
+//   ratio = (XAU/31.1035) / (SPX × trailing DvdYld / 100), daily since 2000:
+//   the price of 1g of gold as a multiple of the SPX dividend/share (G/D —
+//   NOT "grams per dollar", which is the reciprocal D/G). Log Y, normal
+//   orientation: high = gold expensive / shares cheap vs gold. Blue 7y MA,
+//   grey NBER recession bands, signal badge (above MA = remove gold hedge).
+// ═══════════════════════════════════════════════════════════════════════
+let _divgoldYears = 0;   // 0 = full history from 2000
+
+async function renderDivGold(years, btnEl) {
+  const host = document.getElementById('ov-divgold');
+  if (!host) return;
+  if (years === undefined || years === null) years = _divgoldYears;
+  _divgoldYears = years;
+
+  if (!document.getElementById('cv-divgold')) {
+    host.innerHTML = `<div class="chart-card" style="grid-column:1 / -1">
+      <div class="chart-hdr">
+        <div class="chart-title">Gold-to-S&P 500 Dividend Ratio
+          <span id="divgold-badge" style="margin-left:8px;padding:2px 10px;border-radius:12px;font-size:12px;font-weight:700;display:none"></span>
+        </div>
+        <div class="chart-period-bar" id="divgold-period-bar">
+          <button class="cperiod-btn" onclick="renderDivGold(5,this)">5Y</button>
+          <button class="cperiod-btn" onclick="renderDivGold(10,this)">10Y</button>
+          <button class="cperiod-btn active" onclick="renderDivGold(0,this)">All</button>
+        </div>
+      </div>
+      <div class="chart-wrap" style="height:360px">
+        <div class="chart-load" id="cl-divgold">Fetching from Bloomberg…</div>
+        <canvas id="cv-divgold" style="display:none"></canvas>
+      </div>
+    </div>`;
+  }
+  const bar = document.getElementById('divgold-period-bar');
+  if (bar && btnEl) {
+    bar.querySelectorAll('.cperiod-btn').forEach(b => b.classList.remove('active'));
+    btnEl.classList.add('active');
+  }
+  const load = document.getElementById('cl-divgold');
+  const cv = document.getElementById('cv-divgold');
+  try {
+    const r = await fetch(`/api/divgold?years=${years}`);
+    const ct = r.headers.get('content-type') || '';
+    if (!r.ok || !ct.includes('json')) {
+      throw new Error(`server returned ${r.status} — it may be restarting, retry in a few seconds`);
+    }
+    const d = await r.json();
+    if (d.error && !(d.points || []).length) {
+      load.style.display = ''; load.textContent = d.error; load.style.color = '#f85149';
+      cv.style.display = 'none';
+      return;
+    }
+    const pts  = d.points.map(p => ({ x: new Date(p.d).getTime(), y: p.r }));
+    const mpts = d.points.filter(p => p.m != null).map(p => ({ x: new Date(p.d).getTime(), y: p.m }));
+    const xMin = pts.length ? pts[0].x : undefined;
+    const xMax = pts.length ? pts[pts.length - 1].x : undefined;
+
+    // Signal badge (above 7y MA = shares cheap vs gold → remove gold hedge).
+    const badge = document.getElementById('divgold-badge');
+    if (badge && d.signal) {
+      const cheap = d.signal.sharesCheapVsGold;
+      badge.style.display = '';
+      badge.textContent = d.signal.text + ` · ratio ${d.last.ratio} vs MA ${d.last.ma7y}` +
+        (d.stale ? ' · (cache-only, BBG unreachable)' : '');
+      badge.style.background = (cheap ? '#1a7f37' : '#d29922') + '22';
+      badge.style.color = cheap ? '#3fb950' : '#d29922';
+      badge.style.border = '1px solid ' + (cheap ? '#3fb95040' : '#d2992240');
+    }
+
+    // Grey NBER recession bands + long-run mean ≈ 1 reference line.
+    const anns = { mean1: {
+      type: 'line', yMin: 1, yMax: 1, borderColor: '#6e7681', borderWidth: 1, borderDash: [4, 3],
+      label: { content: 'Long-run mean ≈ 1', display: true, position: 'start',
+               backgroundColor: 'transparent', color: '#6e7681', font: { size: 11 } }
+    } };
+    (d.recessions || []).forEach((b, i) => {
+      const s = new Date(b[0]).getTime(), e = new Date(b[1]).getTime();
+      if (xMax !== undefined && (e < xMin || s > xMax)) return;
+      anns['rec' + i] = { type: 'box', xMin: Math.max(s, xMin), xMax: Math.min(e, xMax),
+                          backgroundColor: 'rgba(110,118,129,0.16)', borderWidth: 0 };
+    });
+
+    load.style.display = 'none'; cv.style.display = '';
+    if (cInst['cv-divgold']) cInst['cv-divgold'].destroy();
+    cInst['cv-divgold'] = new Chart(cv.getContext('2d'), {
+      type: 'line',
+      data: { datasets: [
+        { label: '1g gold ÷ SPX div/share (×)', data: pts,
+          borderColor: '#d29922', borderWidth: 1.4, pointRadius: 0, pointHoverRadius: 3,
+          fill: false, tension: 0 },
+        { label: '7-year MA', data: mpts,
+          borderColor: '#2563eb', borderWidth: 1.8, pointRadius: 0, pointHoverRadius: 3,
+          fill: false, tension: 0 },
+      ] },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { display: true, labels: { color: DARK_CHART.tick, font: { size: 11 },
+                    boxWidth: 18, boxHeight: 2 } },
+          tooltip: {
+            backgroundColor: '#1c2128', borderColor: '#30363d', borderWidth: 1,
+            titleColor: '#e6edf3', bodyColor: '#8b949e',
+            callbacks: {
+              title: c => new Date(c[0].parsed.x).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+              label: c => ` ${c.dataset.label}: ${c.parsed.y.toFixed(3)}`,
+            }
+          },
+          zoom: { zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' },
+                  pan: { enabled: true, mode: 'x' } },
+          annotation: { annotations: anns },
+        },
+        scales: {
+          x: { type: 'time', time: { unit: years && years <= 5 ? 'month' : 'year' },
+               min: xMin, max: xMax, bounds: 'data', offset: false,
+               grid: { color: DARK_CHART.grid }, ticks: { color: DARK_CHART.tick, font: { size: 11 }, maxTicksLimit: 10 },
+               border: { color: DARK_CHART.grid } },
+          y: { type: 'logarithmic',                  // normal: high = gold expensive / shares cheap
+               grid: { color: DARK_CHART.grid },
+               ticks: { color: DARK_CHART.tick, font: { size: 11 },
+                        callback: v => { const t = [0.1, 0.2, 0.4, 0.8, 1, 1.6, 3.2, 6.4];
+                                         return t.includes(v) ? String(v) : null; } },
+               border: { color: DARK_CHART.grid } },
+        }
+      }
+    });
+  } catch (err) {
+    if (load) { load.style.display = ''; load.textContent = 'Failed: ' + err; load.style.color = '#f85149'; }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// VANDA POSITIONING — CSV-backed line charts (Position tab)
+//   Source: /api/vanda?years=N  ({asOf, instruments:[{code,name,group,points}]})
+//   One chart per instrument, grouped Equities / Commodities.
+//   `combined_positioning` is a z-score → annotate a zero (neutral) line.
+// ═══════════════════════════════════════════════════════════════════════
+function drawVandaChart(canvasId, it) {
+  const cv = document.getElementById(canvasId);
+  if (!cv) return;
+  const pts = (it.points || []).map(p => ({ x: p.t * 1000, y: p.v }));
+  if (!pts.length) return;
+  const color = VANDA_GROUP_COLOR[it.group] || VANDA_GROUP_COLOR.Other;
+  if (cInst[canvasId]) cInst[canvasId].destroy();
+  cInst[canvasId] = new Chart(cv.getContext('2d'), {
+    type: 'line',
+    data: { datasets: [{
+      label: it.name, data: pts,
+      borderColor: color, backgroundColor: color + '18',
+      borderWidth: 1.6, pointRadius: 0, pointHoverRadius: 4,
+      fill: true, tension: 0.25,
+    }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor:'#1c2128', borderColor:'#30363d', borderWidth:1,
+          titleColor:'#e6edf3', bodyColor:'#8b949e',
+          callbacks: {
+            title: c => new Date(c[0].parsed.x).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}),
+            label: c => ` ${it.name}: ${c.parsed.y.toFixed(2)}`,
+          }
+        },
+        zoom: { zoom:{wheel:{enabled:true},pinch:{enabled:true},mode:'x'}, pan:{enabled:true,mode:'x'} },
+        annotation: { annotations: { zero: {
+          type:'line', yMin:0, yMax:0, borderColor:'#444d56', borderWidth:1, borderDash:[4,3],
+          label:{ content:'Neutral 0', display:true, position:'end',
+                  backgroundColor:'transparent', color:'#6e7681', font:{size:11} }
+        } } },
+      },
+      scales: {
+        x: { type:'time', time:{ unit: 'month' },
+             min: Math.min(...pts.map(p=>p.x)), max: Math.max(...pts.map(p=>p.x)),
+             bounds:'data', offset:false,
+             grid:{ color:DARK_CHART.grid }, ticks:{ color:DARK_CHART.tick, font:{size:11}, maxTicksLimit:8 },
+             border:{ color:DARK_CHART.grid } },
+        y: { grid:{ color:DARK_CHART.grid }, ticks:{ color:DARK_CHART.tick, font:{size:11} },
+             border:{ color:DARK_CHART.grid } },
+      }
+    }
+  });
+}
+
+async function renderVanda(years, btnEl, fresh) {
+  if (years === undefined || years === null) years = _vandaYears;
+  _vandaYears = years;
+  // Toggle the active period button.
+  const bar = document.getElementById('vanda-period-bar');
+  if (bar) {
+    bar.querySelectorAll('.cperiod-btn').forEach(b => b.classList.remove('active'));
+    if (btnEl) btnEl.classList.add('active');
+    else {
+      const want = years === 0 ? 'All' : `${years}Y`;
+      bar.querySelectorAll('.cperiod-btn').forEach(b => { if (b.textContent.trim() === want) b.classList.add('active'); });
+    }
+  }
+  const eqEl = document.getElementById('vanda-equities');
+  const cmEl = document.getElementById('vanda-commodities');
+  if (!eqEl || !cmEl) return;
+  eqEl.innerHTML = '<div class="chart-load" style="grid-column:1/-1">Loading Vanda positioning…</div>';
+  cmEl.innerHTML = '';
+  try {
+    const url = `/api/vanda?years=${years}${fresh ? '&fresh=1' : ''}`;
+    const r = await fetch(url);
+    const d = await r.json();
+    const inst = d.instruments || [];
+    const asof = document.getElementById('vanda-asof');
+    if (asof) asof.textContent =
+      `Combined positioning z-score · ${d.asOf ? 'as of ' + d.asOf : 'no data'} · source CSVs update ~06:00 daily · charts auto-refresh 06:05`;
+    if (!inst.length) {
+      eqEl.innerHTML = `<div class="chart-load" style="grid-column:1/-1;color:#f85149">${d.error ? d.error : 'No Vanda CSVs found'}</div>`;
+      cmEl.innerHTML = '';
+      return;
+    }
+    const groups = { 'Equities': eqEl, 'Commodities': cmEl };
+    eqEl.innerHTML = ''; cmEl.innerHTML = '';
+    inst.forEach(it => {
+      const host = groups[it.group] || eqEl;
+      const cvId = `cv-vanda-${it.code}`;
+      const card = document.createElement('div');
+      card.className = 'chart-card';
+      card.innerHTML = `<div class="chart-hdr">
+          <div class="chart-title">${it.name}</div>
+          <div style="font-size:12px;color:var(--dim)">${it.code}</div>
+        </div>
+        <div class="chart-wrap"><canvas id="${cvId}"></canvas></div>`;
+      host.appendChild(card);
+      drawVandaChart(cvId, it);
+    });
+    // Any group with no instruments — hide its (empty) grid + header cleanly.
+    [['vanda-equities','Equities'],['vanda-commodities','Commodities']].forEach(([gid]) => {
+      const el = document.getElementById(gid);
+      if (el && !el.children.length) el.innerHTML =
+        '<div class="chart-load" style="grid-column:1/-1;color:var(--dim)">No instruments</div>';
+    });
+    _vandaLoaded = true;
+  } catch (e) {
+    eqEl.innerHTML = `<div class="chart-load" style="grid-column:1/-1;color:#f85149">Vanda error: ${e.message}</div>`;
+    cmEl.innerHTML = '';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// VIX TERM STRUCTURE PANEL
+// ═══════════════════════════════════════════════════════════════════════
+function renderVixTermStructure() {
+  const el = document.getElementById('vix-termstr');
+  if (!el) return;
+  const nodes = [
+    {label:'1M VIX',  ticker:'VIX Index'},
+    {label:'3M VIX',  ticker:'VIX3M Index'},
+    {label:'6M VIX',  ticker:'VIX6M Index'},
+    {label:'12M VIX', ticker:'VIX1Y Index'},
+  ];
+  const vals = nodes.map(n => gData.metrics[n.ticker]?.value);
+  const v1 = vals[0], v3 = vals[1];
+  const structure = (v1 && v3) ? (v3 > v1 ? {label:'CONTANGO', color:'#3fb950', note:'Market calm · normal structure'} :
+                                              {label:'BACKWARDATION', color:'#f85149', note:'Stress signal · spot > forward'}) : null;
+  el.innerHTML = nodes.map((n, i) => {
+    const v = vals[i];
+    const bar = v ? Math.min(100, (v / 60) * 100) : 0;
+    const col = !v ? '#30363d' : v > 30 ? '#f85149' : v > 20 ? '#d29922' : '#3fb950';
+    return `<div style="background:var(--card3);border-radius:5px;padding:10px 12px;border:1px solid var(--border)">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--dim);margin-bottom:5px">${n.label}</div>
+      <div style="font-size:22px;font-weight:800;color:${col};font-variant-numeric:tabular-nums">${v ? v.toFixed(1) : '—'}</div>
+      <div style="height:3px;background:var(--border);border-radius:2px;margin-top:6px">
+        <div style="height:100%;width:${bar}%;background:${col};border-radius:2px;transition:width .4s"></div>
+      </div>
+    </div>`;
+  }).join('') + (structure ? `<div style="grid-column:1/-1;display:flex;align-items:center;gap:8px;padding:6px 10px;background:${structure.color}15;border-radius:5px;border:1px solid ${structure.color}30">
+    <div style="width:8px;height:8px;border-radius:50%;background:${structure.color};flex-shrink:0"></div>
+    <div><span style="font-size:13px;font-weight:800;color:${structure.color}">${structure.label}</span>
+    <span style="font-size:12px;color:var(--dim);margin-left:6px">${structure.note}</span></div>
+  </div>` : '');
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// VIX TERM CURVE — snapshots: today vs 1 week ago vs 1 month ago
+// (replicates the notebook's "VIX Structure" cell: x=tenor, y=VIX value)
+// ═══════════════════════════════════════════════════════════════════════
+async function renderVixCurve() {
+  const loadEl = document.getElementById('vix-curve-load');
+  const cvEl   = document.getElementById('vix-curve-canvas');
+  if (!loadEl || !cvEl) return;
+  const tickers = ['VIX Index','VIX3M Index','VIX6M Index','VIX1Y Index'];
+  const tenors  = [1, 3, 6, 12];
+  try {
+    const seriesArr = await Promise.all(tickers.map(t =>
+      fetch(`/api/series/${encodeURIComponent(t)}?field=PX_LAST&years=0.25&periodicity=DAILY`)
+        .then(r => r.json())
+    ));
+    // Pick the value at: latest, ~5 business days ago, ~21 business days ago.
+    const pick = (pts, offset) => {
+      if (!pts || !pts.length) return null;
+      const i = Math.max(0, pts.length - 1 - offset);
+      return pts[i]?.v ?? null;
+    };
+    const today    = seriesArr.map(s => pick(s.points, 0));
+    const weekAgo  = seriesArr.map(s => pick(s.points, 5));
+    const monthAgo = seriesArr.map(s => pick(s.points, 21));
+    if (today.every(v => v == null)) {
+      loadEl.textContent = 'No VIX data — click Refresh';
+      loadEl.style.color = '#f85149';
+      return;
+    }
+    loadEl.style.display = 'none';
+    cvEl.style.display   = 'block';
+    new Chart(cvEl.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: tenors.map(t => `${t}M`),
+        datasets: [
+          {label:'Today',         data: today,    borderColor:'#8b5cf6', backgroundColor:'#8b5cf618', borderWidth:2.2, pointRadius:5, fill:false, tension:0.2},
+          {label:'1 Week Ago',    data: weekAgo,  borderColor:'#0969da', backgroundColor:'#0969da18', borderWidth:1.8, pointRadius:4, fill:false, tension:0.2, borderDash:[4,3]},
+          {label:'1 Month Ago',   data: monthAgo, borderColor:'#57606a', backgroundColor:'#57606a18', borderWidth:1.5, pointRadius:3, fill:false, tension:0.2, borderDash:[2,3]},
+        ]
+      },
+      options: {
+        responsive:true, maintainAspectRatio:false,
+        plugins: {
+          legend: { labels: { boxWidth:10, font:{size:12}, color:DARK_CHART.color, padding:8 } },
+          tooltip: { callbacks: { label: c => ` ${c.dataset.label}: ${c.parsed.y?.toFixed(2) ?? '—'}` } },
+        },
+        scales: {
+          x: { title:{display:true, text:'Tenor', color:DARK_CHART.color, font:{size:12}},
+               grid:{ color:DARK_CHART.grid }, ticks:{ color:DARK_CHART.tick, font:{size:12} } },
+          y: { title:{display:true, text:'VIX', color:DARK_CHART.color, font:{size:12}},
+               grid:{ color:DARK_CHART.grid }, ticks:{ color:DARK_CHART.tick, font:{size:12} } }
+        }
+      }
+    });
+  } catch (e) {
+    loadEl.textContent = `Error: ${e.message}`;
+    loadEl.style.color = '#f85149';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// CROSS-ASSET CORRELATION — SPX vs Baa-Aaa credit spread
+// (replicates the notebook: normalize, plot, 20-day rolling correlation)
+// ═══════════════════════════════════════════════════════════════════════
+async function renderCrossAssetCorr() {
+  const loadEl = document.getElementById('cc-load');
+  const cvEl   = document.getElementById('cc-canvas');
+  const cEl    = document.getElementById('cc-corr');
+  if (!loadEl || !cvEl || !cEl) return;
+  const pct = v => v == null ? '—' : (v >= 0 ? '+' : '') + (v * 100).toFixed(0) + '%';
+  try {
+    const [spxR, aaaR, baaR] = await Promise.all([
+      fetch(`/api/series/SPX%20Index?field=PX_LAST&years=5&periodicity=DAILY`).then(r=>r.json()),
+      fetch(`/api/series/LCA3OAS%20Index?field=PX_LAST&years=5&periodicity=DAILY`).then(r=>r.json()),
+      fetch(`/api/series/LCB1OAS%20Index?field=PX_LAST&years=5&periodicity=DAILY`).then(r=>r.json()),
+    ]);
+    // Align by date (intersection). Build maps then walk a common sorted date list.
+    const toMap = (pts) => Object.fromEntries((pts||[]).map(p => [p.t, p.v]));
+    const mSpx = toMap(spxR.points), mAaa = toMap(aaaR.points), mBaa = toMap(baaR.points);
+    const dates = Object.keys(mSpx)
+                  .filter(t => mAaa[t] !== undefined && mBaa[t] !== undefined)
+                  .map(t => +t).sort((a,b)=>a-b);
+    if (dates.length < 60) {
+      loadEl.textContent = 'Not enough overlapping data';
+      loadEl.style.color = '#f85149';
+      cEl.textContent = '';
+      return;
+    }
+    const spx    = dates.map(t => mSpx[t]);
+    const spread = dates.map(t => (mBaa[t] - mAaa[t]) * 100);  // -> bps
+
+    // Normalize to [0,1] for the dual-line plot
+    const norm = (a) => {
+      const mn = Math.min(...a), mx = Math.max(...a);
+      const r = mx - mn || 1;
+      return a.map(v => (v - mn) / r);
+    };
+    const spxN    = norm(spx);
+    const spreadN = norm(spread);
+
+    // Rolling 20-day correlation of pct-changes (matches notebook intent)
+    const ret = (arr) => arr.map((v, i) => i === 0 ? null : (v - arr[i-1]) / arr[i-1]);
+    const rSpx = ret(spx), rSpr = ret(spread);
+    const window = 20;
+    const rolling = dates.map((_, i) => {
+      if (i < window) return null;
+      const a = rSpx.slice(i-window+1, i+1).filter(x => x !== null);
+      const b = rSpr.slice(i-window+1, i+1).filter(x => x !== null);
+      if (a.length !== b.length || a.length < 5) return null;
+      const meanA = a.reduce((s,v)=>s+v,0)/a.length;
+      const meanB = b.reduce((s,v)=>s+v,0)/b.length;
+      let num=0, dA=0, dB=0;
+      for (let k=0; k<a.length; k++) {
+        const xa = a[k]-meanA, xb = b[k]-meanB;
+        num += xa*xb; dA += xa*xa; dB += xb*xb;
+      }
+      const den = Math.sqrt(dA*dB);
+      return den === 0 ? null : num / den;
+    });
+
+    // Full-window correlation of normalized levels (the notebook's headline corr).
+    const fullCorr = (() => {
+      const a = spxN, b = spreadN;
+      const meanA = a.reduce((s,v)=>s+v,0)/a.length;
+      const meanB = b.reduce((s,v)=>s+v,0)/b.length;
+      let num=0, dA=0, dB=0;
+      for (let k=0; k<a.length; k++) {
+        const xa = a[k]-meanA, xb = b[k]-meanB;
+        num += xa*xb; dA += xa*xa; dB += xb*xb;
+      }
+      const den = Math.sqrt(dA*dB);
+      return den === 0 ? 0 : num / den;
+    })();
+
+    const latestRoll = [...rolling].reverse().find(v => v !== null);
+    const fmt = (x) => x === null || x === undefined ? '—' : (x>=0?'+':'') + x.toFixed(2);
+    // Color: muted when there's no reading, else red/green by sign (an
+    // undefined latestRoll would otherwise read green and imply a positive corr).
+    const corrColor = (x) => (x == null) ? 'var(--muted)' : (x < 0 ? '#cf222e' : '#1a7f37');
+    cEl.innerHTML =
+      `<span style="color:var(--muted)">5y corr:</span> <b style="color:${corrColor(fullCorr)}">${pct(fullCorr)}</b>` +
+      ` &nbsp;·&nbsp; <span style="color:var(--muted)">20d rolling:</span> <b style="color:${corrColor(latestRoll)}">${pct(latestRoll)}</b>`;
+
+    loadEl.style.display = 'none';
+    cvEl.style.display   = 'block';
+    const xs = dates.map(t => t*1000);
+    new Chart(cvEl.getContext('2d'), {
+      type: 'line',
+      data: {
+        datasets: [
+          {label:'S&P 500 (normalized)',           data: xs.map((x,i)=>({x, y:spxN[i]})),    borderColor:'#3fb950', backgroundColor:'transparent', borderWidth:1.6, pointRadius:0, fill:false, tension:0.3, yAxisID:'y'},
+          {label:'Baa-AAA Spread (normalized)',    data: xs.map((x,i)=>({x, y:spreadN[i]})), borderColor:'#dc2626', backgroundColor:'transparent', borderWidth:1.6, pointRadius:0, fill:false, tension:0.3, yAxisID:'y'},
+          {label:'20-day rolling correlation',     data: xs.map((x,i)=>({x, y:rolling[i]})), borderColor:'#7c3aed', backgroundColor:'#7c3aed10', borderWidth:1.3, pointRadius:0, fill:true,  tension:0.3, yAxisID:'y1'},
+        ]
+      },
+      options: {
+        responsive:true, maintainAspectRatio:false,
+        interaction:{ mode:'index', intersect:false },
+        plugins: {
+          legend: { labels: { boxWidth:10, font:{size:12}, color:DARK_CHART.color, padding:8 } },
+          tooltip: { callbacks: { label: c => ` ${c.dataset.label}: ${c.parsed.y?.toFixed?.(3) ?? '—'}` } },
+        },
+        scales: {
+          x: { type:'time', time:{unit:'month'},
+               grid:{ color:DARK_CHART.grid }, ticks:{ color:DARK_CHART.tick, font:{size:11}, maxTicksLimit:10 } },
+          y:  { position:'left',  title:{display:true, text:'Normalized [0,1]', color:DARK_CHART.color, font:{size:11}},
+                grid:{ color:DARK_CHART.grid }, ticks:{ color:DARK_CHART.tick, font:{size:11} } },
+          y1: { position:'right', title:{display:true, text:'Rolling corr', color:'#7c3aed', font:{size:11}},
+                min:-1, max:1, grid:{display:false}, ticks:{ color:'#7c3aed', font:{size:11} } }
+        }
+      }
+    });
+  } catch (e) {
+    loadEl.textContent = `Error: ${e.message}`;
+    loadEl.style.color = '#f85149';
+    if (cEl) cEl.textContent = '';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// 4-QUADRANT MACRO REGIME — asset-relative classification on 7y window
+//
+// Sampling: DAILY bars anchored at 1990-01-02 (backfilled once, then
+//   gap-filled daily at 06:05). The rolling 7y return is recomputed each
+//   trading day, so the "today" dot moves daily. The 12-point trail steps
+//   back ~1 trading month (21 trading days): today, ~1mo ago … ~11mo ago.
+//   The deep 1990 history is the cached data foundation; the recent trail
+//   only consumes the last ~8y (7y window + ~11mo tail).
+//
+// Inflation axis (vertical line):
+//   IF Gold 7y total return > 10Y UST 7y total return
+//   → above the line (Inflationary). Reverse → below (Deflationary).
+//
+// Growth axis (horizontal line):
+//   IF SPX 7y total return > Oil 7y total return
+//   → right of the line (Growth). Reverse → left (Bust).
+//
+// Quadrants:
+//   Inflationary Bust (top-left)   · Inflationary Boom (top-right)
+//   Deflationary Bust (bot-left)   · Deflationary Boom (bot-right)
+//
+// Inputs (all direct, no formulas):
+//   Gold        = XAU Curncy        (spot, $/oz)
+//   SPX         = SPX Index         (S&P 500 price index)
+//   Oil         = CO1 Comdty        (Brent front-month future)
+//   10Y UST TR  = SPBDU1BT Index    (S&P 7-10Y Treasury Total Return)
+// ═══════════════════════════════════════════════════════════════════════
+// Resample a daily [{t,v}] series (ascending) to one MONTH-END value per
+// calendar month — the last print in each (year, month). Mirrors the server
+// backtest's _to_monthly so the quadrant, the history ribbon, and the
+// /api/regime-picks backtest all classify regimes on the SAME monthly basis.
+function _toMonthEnd(points) {
+  const byMonth = new Map();   // 'Y-M' -> point; ascending input so last wins = month-end
+  for (const p of points) {
+    if (p.v == null || isNaN(p.v)) continue;
+    const d = new Date(p.t * 1000);
+    byMonth.set(d.getUTCFullYear() + '-' + (d.getUTCMonth() + 1), p);
+  }
+  return [...byMonth.values()];   // Map keeps first-seen order → chronological by month
+}
+
+async function renderRegimeQuadrant() {
+  const qEl = document.getElementById('quadrant-grid');
+  if (!qEl) return;
+  try {
+    async function s(t) {
+      // MONTHLY (month-end) regime sampling, resampled from the daily history
+      // backfilled to 1990. Cache-only after backfill; the server gap-fills the
+      // newest daily bar. Returns month-end values; the rolling-7y trail below
+      // consumes only the recent tail.
+      const r = await fetch(`/api/series/${encodeURIComponent(t)}?field=PX_LAST&start=1990-01-01&periodicity=DAILY`);
+      const d = await r.json();
+      return _toMonthEnd(d.points || []).map(p => p.v);
+    }
+    const [gold, spx, oil, bondTR] = await Promise.all([
+      s('XAU Curncy'),       // Spot gold ($/oz)
+      s('SPX Index'),        // S&P 500 price index
+      s('CO1 Comdty'),       // Brent front-month future
+      s('SPBDU1BT Index'),   // S&P U.S. Treasury 7-10Y Total Return
+    ]);
+    const WIN = 84;  // 7 years of month-end bars (7 × 12)
+    function retAt(arr, back) {
+      const idx = arr.length - 1 - back;
+      if (idx < WIN) return null;
+      const past = arr[idx - WIN], now = arr[idx];
+      return (past && isFinite(past) && isFinite(now)) ? (now / past - 1) : null;
+    }
+
+    // Build the trail: 12 points spaced 1 month apart (today, 1mo ago,
+    // 2mo ago … 11mo ago) of (X, Y) where
+    //   X = SPX 7y change − Oil 7y change     (positive → growth side)
+    //   Y = Gold 7y change − 10Y UST TR 7y change (positive → inflation side)
+    const TRAIL = 12;
+    const STEP  = 1;    // 1 month between trail points
+    const trail = [];
+    for (let i = TRAIL - 1; i >= 0; i--) {
+      const back = i * STEP;
+      const g  = retAt(gold,   back);
+      const sp = retAt(spx,    back);
+      const o  = retAt(oil,    back);
+      const b  = retAt(bondTR, back);
+      if ([g, sp, o, b].some(v => v == null)) continue;
+      trail.push({ x: sp - o, y: g - b, back });
+    }
+    if (!trail.length) {
+      qEl.innerHTML = '<div style="text-align:center;color:var(--dim);font-size:12px;padding:24px">Need 7y of history — not enough data yet.</div>';
+      return;
+    }
+    const now = trail[trail.length - 1];
+    const inflationary = now.y > 0;
+    const growing      = now.x > 0;
+
+    // Bigger plot — the quadrant section is full-width on the Overview tab.
+    // Aspect ~2.25 : 1 fills more of the screen on a typical desktop while
+    // keeping the labels and the dot proportionate.
+    const W = 900, H = 400;
+    // Top + bottom padding leaves room *inside the viewBox* for the
+    // quadrant labels that sit above and below the plot frame.
+    const PAD_L = 8, PAD_R = 8, PAD_T = 28, PAD_B = 28;
+    const plotW = W - PAD_L - PAD_R;
+    const plotH = H - PAD_T - PAD_B;
+    const cx = PAD_L + plotW / 2;
+    const cy = PAD_T + plotH / 2;
+
+    // Symmetric per-axis scaling with 0 fixed at the CENTRE, so all four
+    // quadrants are ALWAYS on screen. Each axis spans ±(its largest |value|
+    // across the 12 points), scaled by the rolling min/max magnitude (+12% pad,
+    // floor ±20%). One-sided data (e.g. an all-Inflationary-Boom year) sits in
+    // one quadrant, but the empty quadrants stay visible as reference — the
+    // cross-hair never leaves the centre.
+    const extent = vals => Math.max(0.2, ...vals.map(Math.abs)) * 1.12;
+    const extentX = extent(trail.map(p => p.x));
+    const extentY = extent(trail.map(p => p.y));
+    const toPx = p => ({
+      x: cx + (p.x / extentX) * (plotW / 2),
+      y: cy - (p.y / extentY) * (plotH / 2),  // y inverted on screen
+    });
+    const activeColor =
+        inflationary && growing  ? '#0969da'
+      : inflationary && !growing ? '#cf222e'
+      : !inflationary && growing ? '#1a7f37'
+      :                            '#bf8700';
+    const activeLabel =
+        inflationary && growing  ? 'Inflationary Boom'
+      : inflationary && !growing ? 'Inflationary Bust'
+      : !inflationary && growing ? 'Deflationary Boom'
+      :                            'Deflationary Bust';
+
+    const trailPts = trail.map(toPx);
+    const nowPx  = trailPts[trailPts.length - 1];
+    const pct = v => v == null ? '—' : (v >= 0 ? '+' : '') + (v * 100).toFixed(0) + '%';
+
+    // New layout:
+    //   Row 1 (header):       active quadrant pill + X/Y coordinates
+    //   Row 2 (SVG, H px):    plot frame only — quadrant labels in the
+    //                         top/bottom margins, axis arrows in plot edges.
+    qEl.style.display = 'block';
+    qEl.style.height  = (H + 30) + 'px';
+
+    const halfX = PAD_L + plotW / 4;        // centre of the left (bust) half
+    const halfXR = PAD_L + 3 * plotW / 4;   // centre of the right (boom) half
+
+    qEl.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;padding:0 4px;margin-bottom:2px">
+        <span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${activeColor}"></span>
+        <span style="font-size:14px;font-weight:700;color:${activeColor}">${activeLabel}</span>
+        <span style="font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums">
+          X <b style="color:var(--text)">${pct(now.x)}</b>  ·  Y <b style="color:var(--text)">${pct(now.y)}</b>
+        </span>
+      </div>
+      <div style="font-size:12px;color:var(--dim);padding:0 4px;margin-bottom:6px">
+        X-axis: Growth = SPX 7yr return − Oil 7yr return &nbsp;·&nbsp; Y-axis: Inflation = Gold 7yr return − 10Y UST TR 7yr return
+      </div>
+      <svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" style="font-family:inherit;display:block">
+        <!-- quadrant labels OUTSIDE the plot frame (top + bottom margins) -->
+        <text x="${halfX}"  y="${PAD_T-6}"        text-anchor="middle" font-size="17" font-weight="700" fill="#cf222e">Inflationary Bust</text>
+        <text x="${halfXR}" y="${PAD_T-6}"        text-anchor="middle" font-size="17" font-weight="700" fill="#0969da">Inflationary Boom</text>
+        <text x="${halfX}"  y="${PAD_T+plotH+20}" text-anchor="middle" font-size="17" font-weight="700" fill="#bf8700">Deflationary Bust</text>
+        <text x="${halfXR}" y="${PAD_T+plotH+20}" text-anchor="middle" font-size="17" font-weight="700" fill="#1a7f37">Deflationary Boom</text>
+
+        <!-- quadrant tints (faint) — 4 equal halves, origin centred -->
+        <rect x="${PAD_L}"         y="${PAD_T}"         width="${plotW/2}" height="${plotH/2}" fill="#cf222e" fill-opacity="0.05"/>
+        <rect x="${PAD_L+plotW/2}" y="${PAD_T}"         width="${plotW/2}" height="${plotH/2}" fill="#0969da" fill-opacity="0.05"/>
+        <rect x="${PAD_L}"         y="${PAD_T+plotH/2}" width="${plotW/2}" height="${plotH/2}" fill="#bf8700" fill-opacity="0.05"/>
+        <rect x="${PAD_L+plotW/2}" y="${PAD_T+plotH/2}" width="${plotW/2}" height="${plotH/2}" fill="#1a7f37" fill-opacity="0.05"/>
+
+        <!-- plot frame + cross-hair (origin centred → all 4 quadrants always shown) -->
+        <rect x="${PAD_L}" y="${PAD_T}" width="${plotW}" height="${plotH}" fill="none" stroke="#d0d7de"/>
+        <line x1="${PAD_L}" y1="${cy}" x2="${PAD_L+plotW}" y2="${cy}" stroke="#9aa4af" stroke-dasharray="3,3"/>
+        <line x1="${cx}" y1="${PAD_T}" x2="${cx}" y2="${PAD_T+plotH}" stroke="#9aa4af" stroke-dasharray="3,3"/>
+
+        <!-- axis direction arrows (small, inside plot edges, away from data) -->
+        <text x="${PAD_L+plotW-6}" y="${cy+11}" text-anchor="end" font-size="9" fill="#57606a">+ Growth (SPX − Oil)  →</text>
+        <text x="${cx+4}" y="${PAD_T+10}" font-size="9" fill="#57606a">↑  + Inflation (Gold − 10Y UST)</text>
+
+        <!-- 12-month trail: black fill with opacity ramp from oldest (very
+             light grey, 0.10) to most recent (dark grey, ~0.55). Renders as
+             a monochrome grey progression on the tinted background. -->
+        ${trailPts.slice(0, -1).map((p, i) => {
+          const n = Math.max(1, trailPts.length - 1);
+          const op = (0.10 + (i / n) * 0.45).toFixed(2);  // 0.10 -> ~0.55
+          return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2.8" fill="#000000" fill-opacity="${op}"/>`;
+        }).join('')}
+
+        <!-- today: solid dark dot, larger than the trail, with a thin white
+             outline so it stays legible against any quadrant tint. -->
+        <circle cx="${nowPx.x.toFixed(1)}" cy="${nowPx.y.toFixed(1)}" r="6" fill="#000000" stroke="#ffffff" stroke-width="1.5"/>
+      </svg>
+    `;
+
+    const meta = document.getElementById('rb-meta');
+    if (meta) {
+      meta.innerHTML =
+        `<span style="font-size:13px;color:var(--muted)" ` +
+        `title="X = SPX 7y chg − Oil 7y chg · Y = Gold 7y chg − UST 7-10Y TR 7y chg · trail = last 12 months">` +
+        `Gold ${pct(retAt(gold,0))} vs UST 7-10Y TR ${pct(retAt(bondTR,0))}` +
+        ` &nbsp;·&nbsp; ` +
+        `SPX ${pct(retAt(spx,0))} vs Oil ${pct(retAt(oil,0))}` +
+        `</span>`;
+    }
+  } catch (e) {
+    qEl.innerHTML = `<div style="text-align:center;color:#cf222e;font-size:12px;padding:24px">Regime compute failed: ${e.message}</div>`;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// MACRO REGIME — HISTORY RIBBON
+// Same two 7y scores as the quadrant, but computed for every month since
+// ~1997 (7y after the 1990 data start). Each month is classified into one of
+// the four regimes by SIGN (no scaling needed) and drawn as a coloured bar on
+// a time axis — so you read the regime *over history*, not coordinates.
+// ═══════════════════════════════════════════════════════════════════════
+const REGIME_COLOR = {
+  'Inflationary Boom': '#0969da',  // gold>bonds, stocks>oil
+  'Inflationary Bust': '#cf222e',  // gold>bonds, stocks<oil
+  'Deflationary Boom': '#1a7f37',  // gold<bonds, stocks>oil
+  'Deflationary Bust': '#bf8700',  // gold<bonds, stocks<oil
+};
+function _regimeOf(growth, inflation) {
+  const infl = inflation > 0, grow = growth > 0;
+  return infl && grow ? 'Inflationary Boom'
+       : infl && !grow ? 'Inflationary Bust'
+       : !infl && grow ? 'Deflationary Boom'
+       :                 'Deflationary Bust';
+}
+async function renderRegimeTimeline() {
+  const el = document.getElementById('regime-timeline');
+  if (!el) return;
+  try {
+    async function sd(t) {
+      // Month-end resample (same basis as the quadrant + backtest).
+      const r = await fetch(`/api/series/${encodeURIComponent(t)}?field=PX_LAST&start=1990-01-01&periodicity=DAILY`);
+      const d = await r.json();
+      return _toMonthEnd(d.points || []);  // [{t,v}] month-end, ascending
+    }
+    const [gold, spx, oil, bond] = await Promise.all([
+      sd('XAU Curncy'), sd('SPX Index'), sd('CO1 Comdty'), sd('SPBDU1BT Index'),
+    ]);
+    if (![gold, spx, oil, bond].every(a => a.length > 90)) {
+      el.innerHTML = '<div style="text-align:center;color:var(--dim);font-size:12px;padding:18px">Need more history.</div>';
+      return;
+    }
+    const SEVEN_Y = Math.round(7 * 365.25 * 86400);
+    // value at-or-before a unix-ts (binary search; arrays sorted ascending by .t)
+    const valAt = (arr, ts) => {
+      if (arr[0].t > ts) return null;
+      let lo = 0, hi = arr.length - 1, res = null;
+      while (lo <= hi) { const m = (lo + hi) >> 1; if (arr[m].t <= ts) { res = arr[m].v; lo = m + 1; } else hi = m - 1; }
+      return res;
+    };
+    const ret7 = (arr, ts) => {
+      const a = valAt(arr, ts), b = valAt(arr, ts - SEVEN_Y);
+      return (a && b) ? (a / b - 1) : null;
+    };
+    // One ribbon bar per SPX month-end that has a full 7y lookback.
+    const samples = [];
+    for (const pt of spx) {
+      const ts = pt.t;
+      const g = ret7(gold, ts), s = ret7(spx, ts), o = ret7(oil, ts), b = ret7(bond, ts);
+      if ([g, s, o, b].some(v => v == null)) continue;
+      samples.push({ ts, regime: _regimeOf(s - o, g - b) });
+    }
+    if (!samples.length) {
+      el.innerHTML = '<div style="text-align:center;color:var(--dim);font-size:12px;padding:18px">Need 7y of history.</div>';
+      return;
+    }
+    const W = 900, H = 120, PAD_L = 8, PAD_R = 8;
+    const plotW = W - PAD_L - PAD_R;
+    const ribY = 12, ribH = 44, ribBot = ribY + ribH, legY = 92;
+    const N = samples.length, barW = plotW / N;
+    const tsMin = samples[0].ts, tsMax = samples[N-1].ts;
+    const xOfTs = ts => PAD_L + ((ts - tsMin) / ((tsMax - tsMin) || 1)) * plotW;
+    // Light pastel fills (same hues as the quadrant tints, just less faint than
+    // the quadrant's 0.05 so the thin bars stay readable).
+    const TINT = 0.32;
+    const bars = samples.map((smp, i) =>
+      `<rect x="${(PAD_L + i*barW).toFixed(2)}" y="${ribY}" width="${(barW+0.7).toFixed(2)}" height="${ribH}" fill="${REGIME_COLOR[smp.regime]}" fill-opacity="${TINT}"/>`
+    ).join('');
+    let ticks = '';
+    const y0 = new Date(tsMin*1000).getUTCFullYear(), y1 = new Date(tsMax*1000).getUTCFullYear();
+    for (let y = Math.ceil(y0 / 5) * 5; y <= y1; y += 5) {
+      const ts = Date.UTC(y, 0, 1) / 1000;
+      if (ts < tsMin || ts > tsMax) continue;
+      const x = xOfTs(ts);
+      ticks += `<line x1="${x.toFixed(1)}" y1="${ribBot}" x2="${x.toFixed(1)}" y2="${ribBot+5}" stroke="#9aa4af"/>` +
+               `<text x="${x.toFixed(1)}" y="${ribBot+18}" text-anchor="middle" font-size="11" fill="#57606a">${y}</text>`;
+    }
+    const order = ['Inflationary Boom','Inflationary Bust','Deflationary Boom','Deflationary Bust'];
+    const legend = order.map((name, i) => {
+      const lx = PAD_L + i * 222;
+      return `<rect x="${lx}" y="${legY}" width="11" height="11" rx="2" fill="${REGIME_COLOR[name]}" fill-opacity="${TINT}"/>` +
+             `<text x="${lx+16}" y="${legY+10}" font-size="11" fill="#57606a">${name}</text>`;
+    }).join('');
+    el.innerHTML = `
+      <svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" style="font-family:inherit;display:block">
+        ${bars}
+        <rect x="${PAD_L}" y="${ribY}" width="${plotW}" height="${ribH}" fill="none" stroke="#d0d7de"/>
+        ${ticks}
+        ${legend}
+      </svg>`;
+  } catch (e) {
+    el.innerHTML = `<div style="text-align:center;color:#cf222e;font-size:12px;padding:18px">Timeline failed: ${e.message}</div>`;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// OVERVIEW TAB RENDERING
+// ═══════════════════════════════════════════════════════════════════════
+function renderOverview() {
+  // Regime banner
+  const reg = classifyRegime();
+  const rBanner = document.getElementById('regime-banner-ov');
+  const alpha = '20';
+  rBanner.style.background = reg.color + alpha;
+  rBanner.style.borderColor = reg.color + '40';
+  document.getElementById('rb-label').textContent = reg.name;
+  document.getElementById('rb-label').style.color = reg.color;
+  document.getElementById('rb-sub').textContent = reg.sub;
+  document.getElementById('rb-meta').innerHTML = reg.qualifiers.map(q =>
+    `<span style="font-size:13px;color:var(--muted)">${q}</span>`
+  ).join('');
+
+  // ── 4-Quadrant regime grid (asset-relative, 7y window) ────────────────
+  // Inflation axis (vertical):  Gold 7y change  >  10Y UST TR 7y change  → above the line (inflationary)
+  // Growth   axis (horizontal): SPX  7y change  >  Oil 7y change         → right of the line (growth)
+  // Fire-and-forget; the renderer fills the grid once series are fetched.
+  const qEl = document.getElementById('quadrant-grid');
+  if (qEl) {
+    qEl.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--dim);font-size:12px;padding:24px">Computing 7-year asset-relative regime…</div>';
+    renderRegimeQuadrant();
+  }
+  const tlEl = document.getElementById('regime-timeline');
+  if (tlEl) {
+    tlEl.innerHTML = '<div style="text-align:center;color:var(--dim);font-size:12px;padding:18px">Computing regime history…</div>';
+    renderRegimeTimeline();
+  }
+
+  // gold-to-S&P dividend ratio (Gavekal) directly after the regime section
+  renderDivGold();
+
+  // US Treasury Yields (2Y / 5Y / 10Y) below regime
+  renderCharts('ov-ust-yields', [
+    {title:'UST Yields (2Y / 5Y / 10Y)', tickers:['GT2 Govt','GT5 Govt','GT10 Govt'], labels:['2Y','5Y','10Y'], colors:['#f97316','#16a34a','#2563eb'], p:'WEEKLY', y:5, fullWidth:true},
+  ]);
+
+  // Regime-favored assets (backtested)
+  renderRegimePicks();
+
+  // Header badge (may have been removed from HTML)
+  const badge = document.getElementById('regime-badge');
+  if (badge) {
+    badge.textContent = reg.name;
+    badge.style.background = reg.color + '25';
+    badge.style.color = reg.color;
+    badge.style.borderColor = reg.color + '40';
+  }
+
+}
+
+function _toggleRegimeRows(btn) {
+  const rows = document.querySelectorAll('#regime-picks tr.rp-more');
+  const total = document.querySelectorAll('#regime-picks tbody tr').length;
+  const open = btn.dataset.open === '1';
+  rows.forEach(r => r.style.display = open ? 'none' : 'table-row');
+  btn.dataset.open = open ? '0' : '1';
+  btn.textContent = open ? `Show all ${total} ▾` : 'Show less ▴';
+}
+
+async function renderRegimePicks() {
+  const el = document.getElementById('regime-picks');
+  if (!el) return;
+  try {
+    const r = await fetch('/api/regime-picks');
+    const d = await r.json();
+    if (d.error) { el.innerHTML = `<div style="color:#f85149;padding:12px">${d.error}</div>`; return; }
+
+    const assets = d.assets || [];
+    if (!assets.length) { el.innerHTML = '<div style="color:var(--dim);padding:12px">No backtest data for this regime.</div>'; return; }
+
+    const pct = (v, dp=1) => v == null ? '—' : (v >= 0 ? '+' : '') + (v * 100).toFixed(dp) + '%';
+    const col = v => v == null ? 'var(--dim)' : (v >= 0 ? '#1a7f37' : '#cf222e');
+
+    // Rank non-thin assets first (by historical 3M return), thin ones after so
+    // they never enter the top 5. Default view = top 5 (all non-thin); the rest
+    // stay hidden behind a toggle, with thin ones tagged.
+    const ordered = [...assets].sort((a, b) =>
+      ((a.thin ? 1 : 0) - (b.thin ? 1 : 0)) || (b.avg3M - a.avg3M));
+    const nonThin = ordered.filter(a => !a.thin);
+    const topN = Math.min(5, nonThin.length);
+
+    const rowHtml = ordered.map((a, i) => {
+      const hidden = i >= topN;
+      const thinTag = a.thin
+        ? `<span title="Too few distinct regime episodes / small sample — excluded from Top 5" style="font-size:10px;color:#bf8700;border:1px solid #bf870055;border-radius:3px;padding:0 4px;margin-left:6px">thin</span>`
+        : '';
+      return `<tr class="${hidden ? 'rp-more' : ''}"${hidden ? ' style="display:none"' : ''}>
+        <td style="padding:6px 10px;color:var(--dim)">${i+1}</td>
+        <td style="padding:6px 10px;font-weight:600;color:var(--text)">${a.name}${thinTag}</td>
+        <td style="padding:6px 10px;text-align:left;font-weight:600;color:${col(a.current3M)};font-variant-numeric:tabular-nums">${pct(a.current3M)}</td>
+        <td style="padding:6px 10px;text-align:left;font-weight:700;color:${col(a.avg3M)};font-variant-numeric:tabular-nums">${pct(a.avg3M)}</td>
+        <td style="padding:6px 10px;text-align:left;color:var(--muted);font-variant-numeric:tabular-nums">${a.winRate == null ? '—' : (a.winRate * 100).toFixed(0) + '%'}</td>
+      </tr>`;
+    }).join('');
+
+    const th = (t, hint) => `<th title="${hint||''}" style="padding:6px 10px;text-align:left;font-size:11px;font-weight:600;color:var(--dim);border-bottom:1px solid var(--border);white-space:nowrap">${t}</th>`;
+    const moreCount = ordered.length - topN;
+
+    el.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:0 2px;flex-wrap:wrap">
+        <span style="font-size:13px;color:var(--muted)">Current regime:</span>
+        <span style="font-size:14px;font-weight:700;color:var(--text)">${d.regime}</span>
+        <span style="font-size:12px;color:var(--dim);margin-left:auto">${d.horizonMonths}M forward returns · since ${1990 + d.lookbackY}</span>
+      </div>
+      <div style="overflow-x:auto;background:var(--card);border:1px solid var(--border);border-radius:var(--r);margin-bottom:14px">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed">
+          <colgroup><col style="width:40px"><col style="width:26%"><col><col><col></colgroup>
+          <thead><tr>
+            <th style="padding:6px 10px;text-align:left;font-size:11px;font-weight:600;color:var(--dim);border-bottom:1px solid var(--border)">#</th>
+            <th style="padding:6px 10px;text-align:left;font-size:11px;font-weight:600;color:var(--dim);border-bottom:1px solid var(--border)">Asset</th>
+            ${th('Current 3M','Actual trailing 3-month return (latest price vs 3 months ago)')}
+            ${th('3M Hist. Return','Weighted-average 3-month forward return in this regime historically')}
+            ${th('Hist. Win%','How often that historical 3M forward return was positive')}
+          </tr></thead>
+          <tbody>${rowHtml}</tbody>
+        </table>
+        ${moreCount > 0 ? `<div style="border-top:1px solid var(--border);padding:6px 10px">
+          <button onclick="_toggleRegimeRows(this)" data-open="0" style="background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;padding:2px 0">Show all ${ordered.length} ▾</button>
+        </div>` : ''}
+      </div>
+      <div style="font-size:12px;font-weight:600;color:#1a7f37;margin:2px 2px 8px">Top ${topN} — recent price</div>
+      <div class="chart-grid cg3" id="regime-picks-top"></div>`;
+
+    // Charts: the Top 5 (non-thin) by historical 3M forward return.
+    const mk = a => ({
+      title: `${a.name} - 3M Return ${pct(a.current3M)}`,
+      tickers: [a.ticker],
+      labels: [a.name],
+      colors: [a.avg3M >= 0 ? '#1a7f37' : '#cf222e'],
+      p: 'WEEKLY', y: 1, fullWidth: false,
+    });
+    renderCharts('regime-picks-top', nonThin.slice(0, topN).map(mk));
+  } catch (e) {
+    el.innerHTML = `<div style="color:#f85149;padding:12px">Error: ${e.message}</div>`;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// TAB SWITCHING
+// ═══════════════════════════════════════════════════════════════════════
+function switchTab(id) {
+  gTab = id;
+  document.querySelectorAll('.tc').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+  document.getElementById('tc-' + id).classList.add('active');
+  document.getElementById('tb-' + id).classList.add('active');
+
+  if (id === 'ov') {
+    if (_tabDirty.has('ov')) {
+      renderOverview();
+      _tabDirty.delete('ov');
+    }
+    if (!_vandaLoaded) renderVanda();
+    return;
+  }
+
+  const cfg = CFG[id];
+  if (!cfg) return;
+  if (!_tabDirty.has(id)) return;
+  if (cfg.sections) renderSections(id, cfg.sections);
+  if (cfg.metrics)  renderTable(id, cfg.metrics);
+  _tabDirty.delete(id);
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// DATA LOAD
+// ═══════════════════════════════════════════════════════════════════════
+async function loadData() {
+  try {
+    const r = await fetch('/api/macro');
+    gData = await r.json();
+    if (!gData.metrics) gData.metrics = {};
+    // Inject computed metric: US Baa-Aaa credit spread (bps).
+    // LCB1OAS = Baa OAS, LCA3OAS = Aaa OAS → spread = Baa − Aaa.
+    const aaa = gData.metrics['LCA3OAS Index'];
+    const baa = gData.metrics['LCB1OAS Index'];
+    if (aaa && baa && aaa.value != null && baa.value != null) {
+      gData.metrics['_BAA_AAA_SPREAD'] = {
+        value: baa.value - aaa.value,
+        chgAbs: (baa.chgAbs || 0) - (aaa.chgAbs || 0),
+        lastUpdate: baa.lastUpdate || aaa.lastUpdate,
+        error: null,
+      };
+    }
+    // Injected computed metric: US 2s10s curve spread (bps).
+    // GT2 / GT10 use YLD_YTM_MID so values are %; * 100 -> bps.
+    const t2 = gData.metrics['GT2 Govt'];
+    const t10 = gData.metrics['GT10 Govt'];
+    if (t2 && t10 && t2.value != null && t10.value != null) {
+      gData.metrics['_2s10s_SPREAD'] = {
+        value: t10.value - t2.value,            // displayed mult:100 -> bps
+        chgAbs: (t10.chgAbs || 0) - (t2.chgAbs || 0),
+        lastUpdate: t10.lastUpdate || t2.lastUpdate,
+        error: null,
+      };
+    }
+    const hdr = document.getElementById('hdr-rf');
+    hdr.textContent = gData.lastRefresh ? `Last Refresh: ${gData.lastRefresh}` : 'No data · click Refresh';
+    ['ov','econ','money','mkts','equity'].forEach(t => _tabDirty.add(t));
+    Object.values(cInst).forEach(c => { try { c.destroy(); } catch{} });
+    Object.keys(cInst).forEach(k => delete cInst[k]);
+    // Re-render current tab
+    switchTab(gTab);
+  } catch(e) { console.error('loadData:', e); }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// REFRESH
+// ═══════════════════════════════════════════════════════════════════════
+async function doRefresh() {
+  const btn = document.getElementById('btn-rf');
+  const hdr = document.getElementById('hdr-rf');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="sp">⟳</span> Updating…';
+  hdr.textContent = 'Updating — downloading fresh Vanda + snapshot + gap-fill all series…';
+  try {
+    // Full update with a LIVE Vanda scrape: re-download the Vanda CSVs from the
+    // website, then reload them + BBG snapshot + gap-fill every displayed series
+    // (missing days + today). ?scrape=1 is what triggers the fresh download.
+    const r = await fetch('/api/update?scrape=1');
+    const j = await r.json();
+    if (j.status === 'ok' || j.status === 'bbg_unavailable') {
+      // The server has refreshed the cache; charts re-render cache-only (fast).
+      if (window._flushSeriesMemo) window._flushSeriesMemo();
+      ['ov','econ','money','mkts','equity'].forEach(t => _tabDirty.add(t));
+      await loadData();                       // re-renders the current tab from fresh cache
+      if (gTab === 'ov') await renderVanda(_vandaYears, null, true);
+      else _vandaLoaded = false;              // redraw Vanda next time Position opens
+      if (j.status === 'bbg_unavailable')
+        hdr.textContent = `Bloomberg unavailable — showing last cache · ${gData.lastRefresh || ''}`;
+    }
+    else { hdr.textContent = `Error: ${j.message || j.error || 'update failed'}`; }
+  } catch(e) {
+    hdr.textContent = `Error: ${e.message}`;
+  }
+  btn.disabled = false;
+  btn.innerHTML = '⟳ Refresh';
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// EXPORT TO EXCEL — multi-sheet workbook built server-side from cache
+// ═══════════════════════════════════════════════════════════════════════
+async function doExport() {
+  const btn = document.getElementById('btn-xl');
+  const hdr = document.getElementById('hdr-rf');
+  const original = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="sp">⤓</span> Building…';
+  hdr.textContent = 'Aligning time grids · writing Excel…';
+  try {
+    const r = await fetch('/api/export?years=10');
+    if (!r.ok) {
+      const j = await r.json().catch(() => ({}));
+      throw new Error(j.message || r.statusText);
+    }
+    const blob = await r.blob();
+    const disp = r.headers.get('Content-Disposition') || '';
+    const m = disp.match(/filename="([^"]+)"/);
+    const fname = m ? m[1] : 'macro_dashboard.xlsx';
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = fname;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+    if (gData?.lastRefresh) hdr.textContent = `Last Refresh: ${gData.lastRefresh}`;
+  } catch (e) {
+    hdr.textContent = `Export error: ${e.message}`;
+  }
+  btn.disabled = false;
+  btn.innerHTML = original;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// DAILY AUTO-REFRESH at 06:05 local — runs the full update (Vanda CSVs +
+// BBG snapshot + gap-fill all series). The server runs the SAME update at 06:05
+// on its own (browser-independent), so the cache is fresh even with no browser
+// open; this client-side tick makes an already-open tab redraw. Catch-up: if
+// the page is opened later in the day, it fires once on load.
+// ═══════════════════════════════════════════════════════════════════════
+const DAILY_REFRESH_HOUR = 6;
+const DAILY_REFRESH_MIN  = 5;
+let _dailyFiredFor = (new Date() >= _todayCutoff()) ? _todayKey() : null;
+
+function _todayCutoff() {
+  const d = new Date();
+  d.setHours(DAILY_REFRESH_HOUR, DAILY_REFRESH_MIN, 0, 0);
+  return d;
+}
+function _todayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2,'0')}-${d.getDate().toString().padStart(2,'0')}`;
+}
+
+async function checkDailyRefresh() {
+  const now = new Date();
+  if (now < _todayCutoff()) return;             // pre-06:05 → nothing to do
+  if (_dailyFiredFor === _todayKey()) return;   // already fired today
+  _dailyFiredFor = _todayKey();                 // claim the slot first
+  console.log('Daily auto-refresh (06:05): refreshing all charts');
+  await doRefresh();   // snapshot + fresh series (force pull) + Vanda redraw
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// TABLE SORT
+// ═══════════════════════════════════════════════════════════════════════
+const _ss = {};
+function srt(id, col) {
+  const tbl = document.getElementById(id);
+  const ths = tbl.querySelectorAll('thead th');
+  const tbody = tbl.querySelector('tbody');
+  const key = `${id}-${col}`;
+  _ss[key] = _ss[key]==='asc' ? 'desc' : 'asc';
+  ths.forEach(th => th.classList.remove('sa','sd'));
+  ths[col].classList.add(_ss[key]==='asc'?'sa':'sd');
+  const rows = Array.from(tbody.querySelectorAll('tr'));
+  rows.sort((a,b) => {
+    const av = a.cells[col]?.textContent.trim()||'';
+    const bv = b.cells[col]?.textContent.trim()||'';
+    const an = parseFloat(av.replace(/[^0-9.-]/g,''));
+    const bn = parseFloat(bv.replace(/[^0-9.-]/g,''));
+    const cmp = (!isNaN(an)&&!isNaN(bn)) ? an-bn : av.localeCompare(bv);
+    return _ss[key]==='asc' ? cmp : -cmp;
+  });
+  rows.forEach(r => tbody.appendChild(r));
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// CHART MODAL
+// ═══════════════════════════════════════════════════════════════════════
+let _mTicker = null, _mLabel = null, _mFmt = '2f', _mUnit = '', _mMult = 1,
+    _mColor = '#58a6ff', _mRef = undefined, _mInst = null;
+
+function openChart(ticker, label, fmt, unit, mult, color, refLine) {
+  _mTicker = ticker;
+  _mLabel  = label;
+  _mFmt    = fmt  || '2f';
+  _mUnit   = unit || '';
+  _mMult   = mult || 1;
+  _mColor  = color || '#58a6ff';
+  _mRef    = refLine;
+  document.getElementById('modal-title').textContent = label;
+  document.getElementById('modal-sub').textContent   = ticker;
+  const modal = document.getElementById('chart-modal');
+  modal.classList.add('open');
+  // Default to 2Y
+  const btns = modal.querySelectorAll('.period-btn');
+  btns.forEach(b => b.classList.remove('active'));
+  const defBtn = modal.querySelector('.period-btn[onclick*="loadModalChart(2"]');
+  if (defBtn) defBtn.classList.add('active');
+  loadModalChart(2, defBtn);
+}
+
+function closeChartModal(e) {
+  if (e.target.id === 'chart-modal')
+    document.getElementById('chart-modal').classList.remove('open');
+}
+
+async function loadModalChart(years, btnEl) {
+  document.getElementById('modal-period-bar')
+    .querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+  if (btnEl) btnEl.classList.add('active');
+  const loadEl = document.getElementById('modal-chart-load');
+  const cvEl   = document.getElementById('modal-canvas');
+  loadEl.textContent = 'Fetching from Bloomberg…';
+  loadEl.style.display = 'flex';
+  loadEl.style.color   = '';
+  cvEl.style.display   = 'none';
+  // Pick BDH periodicity by the ticker's natural cadence (server's PERIODICITY
+  // dict, exposed via /api/macro). Monthly/quarterly econ series like PMIs and
+  // GDP return nothing when asked for DAILY/WEEKLY bars, so for those we always
+  // use MONTHLY/QUARTERLY regardless of the year window.
+  const tickPeriod = gData?.metrics?.[_mTicker]?.periodicity || 'D';
+  let periodicity, timeUnit;
+  if (tickPeriod === 'Q') {
+    periodicity = 'QUARTERLY'; timeUnit = 'quarter';
+  } else if (tickPeriod === 'M') {
+    periodicity = 'MONTHLY';   timeUnit = 'month';
+  } else if (tickPeriod === 'W') {
+    periodicity = 'WEEKLY';    timeUnit = 'week';
+  } else {  // 'D' — naive year-window mapping for daily-cadence tickers
+    periodicity = years <= 0.5 ? 'DAILY' : years <= 2 ? 'WEEKLY'  : 'MONTHLY';
+    timeUnit    = years <= 0.5 ? 'day'    : years <= 2 ? 'week'    : 'month';
+  }
+  try {
+    const r    = await fetch(`/api/series/${encodeURIComponent(_mTicker)}?field=PX_LAST&years=${years}&periodicity=${periodicity}`);
+    const data = await r.json();
+    if (!data.points || !data.points.length) {
+      loadEl.textContent = 'No Bloomberg data — click Refresh';
+      loadEl.style.color = '#f85149';
+      return;
+    }
+    loadEl.style.display = 'none';
+    cvEl.style.display   = 'block';
+    const pts = data.points.map(p => ({ x: p.t * 1000, y: p.v * _mMult }));
+    const annotations = {};
+    if (_mRef !== undefined && _mRef !== null) {
+      annotations.refLine = {
+        type:'line', yMin:_mRef, yMax:_mRef,
+        borderColor:'#444d56', borderWidth:1, borderDash:[4,3],
+        label:{ content: _mRef===50?'Neutral 50':`${_mRef}`,
+                display:true, position:'end', backgroundColor:'transparent',
+                color:'#6e7681', font:{size:11} }
+      };
+    }
+    if (_mInst) { _mInst.destroy(); _mInst = null; }
+    _mInst = new Chart(cvEl.getContext('2d'), {
+      type:'line',
+      data:{ datasets:[{
+        label: _mLabel, data: pts,
+        borderColor: _mColor, backgroundColor: _mColor+'18',
+        borderWidth: 2, pointRadius: 0, pointHoverRadius: 5,
+        fill: true, tension: 0.3,
+      }]},
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        interaction:{ mode:'index', intersect:false },
+        plugins:{
+          legend:{ display:false },
+          tooltip:{
+            backgroundColor:'#1c2128', borderColor:'#30363d', borderWidth:1,
+            titleColor:'#e6edf3', bodyColor:'#8b949e',
+            callbacks:{
+              title: c => new Date(c[0].parsed.x).toLocaleDateString('en-GB',{month:'short',year:'numeric'}),
+              label: c => ` ${_mLabel}: ${fv(c.parsed.y / _mMult, _mFmt, _mUnit)}`
+            }
+          },
+          zoom:{ zoom:{wheel:{enabled:true},pinch:{enabled:true},mode:'x'}, pan:{enabled:true,mode:'x'} },
+          annotation:{ annotations }
+        },
+        scales:{
+          x:{ type:'time', time:{ unit:timeUnit },
+              grid:{ color:DARK_CHART.grid }, ticks:{ color:DARK_CHART.tick, font:{size:11}, maxTicksLimit:10 },
+              border:{ color:DARK_CHART.grid } },
+          y:{ grid:{ color:DARK_CHART.grid },
+              ticks:{ color:DARK_CHART.tick, font:{size:11},
+                      callback: v => fmtAxis(v / _mMult, _mUnit, _mFmt) },
+              border:{ color:DARK_CHART.grid } }
+        }
+      }
+    });
+  } catch(e) {
+    loadEl.textContent = `Error: ${e.message}`;
+    loadEl.style.color = '#f85149';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', async () => {
+  await loadData();
+  setInterval(checkDailyRefresh, 60_000);
+});
+</script>
+</body>
+</html>

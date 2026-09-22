@@ -1,0 +1,14 @@
+﻿anyio==4.14.0
+blpapi==3.26.3.1
+certifi==2026.6.17
+h11==0.16.0
+httpcore==1.0.9
+httpx==0.28.1
+idna==3.18
+narwhals==2.22.1
+numpy==2.4.6
+pandas==3.0.3
+python-dateutil==2.9.0.post0
+six==1.17.0
+tzdata==2026.2
+xbbg==1.2.2
